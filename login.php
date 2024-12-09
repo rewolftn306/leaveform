@@ -7,7 +7,7 @@
     <style>
         body {
             font-family: Arial, sans-serif;
-            background: linear-gradient(to bottom right, #FFFF33, #F5F5F5);
+            background: linear-gradient(to bottom right, #FFFFFF, #6699FF);
             margin: 0;
             padding: 0;
             display: flex;
@@ -110,7 +110,7 @@
 </head>
 <body>
     <div class="header">
-        <img src="Screenshot.png" alt="Logo">
+        <img src="ITLOL.png" alt="Logo">
     </div>
 
     <div class="login-container">

@@ -2,7 +2,12 @@
 session_start();
 
 // เชื่อมต่อฐานข้อมูล
-include('connect.php');
+$servername = "localhost";
+$dbusername = "root";
+$dbpassword = "";
+$dbname = "leaveform";
+
+$conn = new mysqli($servername, $dbusername, $dbpassword, $dbname);
 
 if ($conn->connect_error) {
     die("ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " . $conn->connect_error);

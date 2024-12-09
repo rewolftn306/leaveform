@@ -1,49 +1,101 @@
 <?php
 // เชื่อมต่อฐานข้อมูล
-include('connect.php');
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "leaveform";  // ชื่อฐานข้อมูลที่ใช้
 
-// รับข้อมูลจากฟอร์ม
+$conn = new mysqli($servername, $username, $password, $dbname);
+
+// ตรวจสอบการเชื่อมต่อ
+if ($conn->connect_error) {
+    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
+}
+
+// รับค่าจากฟอร์ม
 $username = $_POST['username'];
 $password = password_hash($_POST['password'], PASSWORD_DEFAULT); // เข้ารหัสรหัสผ่าน
-$firstname = $_POST['firstname'];
-$lastname = $_POST['lastname'];
-$email = $_POST['email'];
-$role = $_POST['role'];
-$position = $_POST['position'];
-$department = $_POST['department'];
-$tel = $_POST['tel'];
-$profile_picture = $_FILES['profile_picture']['name']; // รับชื่อไฟล์โปรไฟล์
-$target_dir = "uploads/"; // โฟลเดอร์ที่เก็บโปรไฟล์
-$target_file = $target_dir . basename($_FILES['profile_picture']['name']);
+$firstname = $_POST['firstname'] ? $_POST['firstname'] : NULL; // กรณีที่ไม่ได้กรอกให้เป็น NULL
+$lastname = $_POST['lastname'] ? $_POST['lastname'] : NULL; // กรณีที่ไม่ได้กรอกให้เป็น NULL
+$email = $_POST['email'] ? $_POST['email'] : NULL; // กรณีที่ไม่ได้กรอกให้เป็น NULL
+$role = $_POST['role'] ? $_POST['role'] : NULL; // กรณีที่ไม่ได้กรอกให้เป็น NULL
 
-// 1. Insert ข้อมูลลงในตาราง `users`
-$sql_users = "INSERT INTO users (username, password, firstname, lastname, email, role, profile_picture)
-              VALUES ('$username', '$password', '$firstname', '$lastname', '$email', '$role', '$profile_picture')";
+// การอัปโหลดไฟล์โปรไฟล์
+$profile_picture = NULL;
+if (!empty($_FILES["profile_picture"]["name"])) {
+    $target_dir = "uploads/"; // โฟลเดอร์ที่เก็บไฟล์
+    $target_file = $target_dir . basename($_FILES["profile_picture"]["name"]);
+    $profile_picture = $target_file;
+    if (!move_uploaded_file($_FILES["profile_picture"]["tmp_name"], $target_file)) {
+        die("ขออภัย มีข้อผิดพลาดในการอัปโหลดไฟล์.");
+    }
+}
 
-if ($mysqli->query($sql_users) === TRUE) {
-    // 2. ดึง `UserID` ที่เพิ่งเพิ่มจากตาราง `users`
-    $user_id = $mysqli->insert_id; // รหัสผู้ใช้ที่เพิ่งเพิ่ม
+// สร้างคำสั่ง SQL เพื่อบันทึกข้อมูลลงในตาราง users
+$sql_users = "INSERT INTO users (username, password, firstname, lastname, email, role, profile_picture) 
+              VALUES (?, ?, ?, ?, ?, ?, ?)";
 
-    // 3. Insert ข้อมูลลงในตาราง `employees` สำหรับ role = Employee
+// เตรียมคำสั่ง SQL
+$stmt_users = $conn->prepare($sql_users);
+if (!$stmt_users) {
+    die("เกิดข้อผิดพลาดในการเตรียมคำสั่ง SQL: " . $conn->error);
+}
+
+// ผูกค่าตัวแปรกับคำสั่ง SQL
+$stmt_users->bind_param("sssssss", $username, $password, $firstname, $lastname, $email, $role, $profile_picture);
+
+// ประมวลผลคำสั่ง SQL
+if ($stmt_users->execute()) {
+    echo "ลงทะเบียนสำเร็จ!";
+
+    // ตรวจสอบว่า role เป็น Employee หรือไม่
     if ($role == "Employee") {
-        $sql_employees = "INSERT INTO employees (UserID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role)
-                          VALUES ('$user_id', '$position', '$department', NOW(), '$email', '$tel', '$firstname $lastname', '$profile_picture', '$role')";
+        // ดึงข้อมูลจากตาราง users ไปยังตาราง employees
+        $last_inserted_id = $stmt_users->insert_id;
 
-        // Execute การแทรกข้อมูลลงในตาราง `employees`
-        if ($mysqli->query($sql_employees) === TRUE) {
-            // ย้ายไฟล์โปรไฟล์
-            move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file);
-            
-            // แสดงข้อความว่า "ลงทะเบียนผู้ใช้และข้อมูลพนักงานเสร็จสมบูรณ์"
-            echo "<script>
-                    alert('ลงทะเบียนผู้ใช้และข้อมูลพนักงานเสร็จสมบูรณ์');
-                    window.location.href = 'login.php';
-                  </script>";
-        } else {
-            echo "เกิดข้อผิดพลาดในการบันทึกข้อมูลพนักงาน: " . $mysqli->error;
+        // กำหนดค่า Tel และ Department สำหรับ Employee
+        $tel = NULL;  // สามารถใส่ค่าตามที่ต้องการได้ เช่น 'N/A'
+        $department = 'พนักงาน';  // หรือสามารถกำหนดตามตำแหน่ง เช่น 'Admin' หรือ 'Employee'
+
+        // สร้างชื่อเต็ม (Full Name)
+        $full_name = $firstname . ' ' . $lastname;
+
+        // สร้างคำสั่ง SQL เพื่อแทรกข้อมูลลงในตาราง employees
+        $sql_employees = "INSERT INTO employees (EmployeeID, Name, Position, Department, StartOfWork, Email, Tel, profile_picture, role)
+                          VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?)";
+
+        // เตรียมคำสั่ง SQL สำหรับ employees
+        $stmt_employees = $conn->prepare($sql_employees);
+        if (!$stmt_employees) {
+            die("เกิดข้อผิดพลาดในการเตรียมคำสั่ง SQL สำหรับ employees: " . $conn->error);
         }
+
+        // ผูกค่าตัวแปรกับคำสั่ง SQL
+        $stmt_employees->bind_param("issssssss",
+            $last_inserted_id, // EmployeeID
+            $full_name, // Name
+            $role, // Position
+            $department, // Department
+            $email, // Email
+            $tel, // Tel
+            $profile_picture, // profile_picture
+            $role // role
+        );
+
+        if ($stmt_employees->execute()) {
+            echo "ข้อมูลได้ถูกย้ายไปยังตาราง employees เรียบร้อยแล้ว!";
+        } else {
+            echo "เกิดข้อผิดพลาดในการย้ายข้อมูล: " . $stmt_employees->error;
+        }
+
+        // ปิด statement ของ employees หลังจากการใช้งานเสร็จ
+        $stmt_employees->close();
     }
 } else {
-    echo "เกิดข้อผิดพลาดในการบันทึกข้อมูลผู้ใช้: " . $mysqli->error;
+    echo "เกิดข้อผิดพลาดในการบันทึกข้อมูลในตาราง users: " . $stmt_users->error;
 }
+
+// ปิด statement ของ users หลังจากการใช้งานเสร็จ
+$stmt_users->close();
+$conn->close();
 ?>
