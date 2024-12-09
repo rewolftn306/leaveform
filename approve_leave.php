@@ -8,7 +8,12 @@ if (!isset($_SESSION['Username'])) {
 }
 
 // เชื่อมต่อฐานข้อมูล
-include('connect.php');
+$host = "localhost";
+$username = "root";
+$password = "";
+$database = "leaveform";
+
+$conn = new mysqli($host, $username, $password, $database);
 
 if ($conn->connect_error) {
     die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
@@ -188,6 +193,8 @@ $conn->close();
                 <th>เวลา</th>
                 <th>สถานะ</th>
                 <th>การดำเนินการ</th>
+
+
             </tr>
         </thead>
         <tbody>
@@ -196,16 +203,18 @@ $conn->close();
                 echo "<tr><td colspan='6'>ไม่พบข้อมูล</td></tr>";
             } else {
                 foreach ($leaves as $index => $leave) {
-                    $name = htmlspecialchars($leave['ENAME'] ?? 'ไม่พบชื่อ');
-                    $type = htmlspecialchars($leave['leave_type'] ?? 'ไม่พบประเภท');
-                    $time = htmlspecialchars($leave['leave_time'] ?? 'ไม่พบเวลา');
+                    $name = htmlspecialchars($leave['EmployeeID'] ?? 'ไม่พบชื่อ');
+                    $type = htmlspecialchars($leave['LeaveTypeID'] ?? 'ไม่พบประเภท');
+                    $timestartdate = htmlspecialchars($leave['StartDate'] ?? 'ไม่พบเวลา');
+                    $timeenddate = htmlspecialchars($leave['EndDate'] ?? 'ไม่พบสถานะ');
                     $status = htmlspecialchars($leave['status'] ?? 'ไม่พบสถานะ');
                 
                     echo "<tr>
                             <td>" . ($index + 1) . "</td>
                             <td>" . $name . "</td>
                             <td>" . $type . "</td>
-                            <td>" . $time . "</td>
+                            <td>" . $timestartdate . "</td>
+                            <td>" . $timeenddate . "</td>
                             <td>" . $status . "</td>
                             <td>
                                 <form method='POST'>

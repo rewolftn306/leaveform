@@ -11,7 +11,12 @@ if (!isset($_SESSION['Username'])) {
 $user_name = $_SESSION['Username'];
 
 // เชื่อมต่อฐานข้อมูล
-include('connect.php');
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "leaveform";
+
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 if ($conn->connect_error) {
     echo "ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " . $conn->connect_error;

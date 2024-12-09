@@ -1,6 +1,12 @@
 <?php
 // การเชื่อมต่อฐานข้อมูล
-include('connect.php');
+$servername = "localhost";
+$username = "root";
+$password = "";
+$dbname = "leaveform"; // ชื่อฐานข้อมูลของคุณ
+
+// สร้างการเชื่อมต่อ
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // ตรวจสอบการเชื่อมต่อ
 if ($conn->connect_error) {
