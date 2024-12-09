@@ -41,8 +41,6 @@ $stmt_users->bind_param("sssssss", $username, $password, $firstname, $lastname, 
 
 // ประมวลผลคำสั่ง SQL
 if ($stmt_users->execute()) {
-    echo "ลงทะเบียนสำเร็จ!";
-
     // ตรวจสอบว่า role เป็น Employee หรือไม่
     if ($role == "Employee") {
         // ดึงข้อมูลจากตาราง users ไปยังตาราง employees
@@ -68,23 +66,31 @@ if ($stmt_users->execute()) {
         // ผูกค่าตัวแปรกับคำสั่ง SQL
         $stmt_employees->bind_param("isssssss",
             $last_inserted_id, // EmployeeID
-            $role, // Position
-            $department, // Department
-            $email, // Email
-            $tel, // Tel
-            $full_name, // Name
-            $profile_picture, // profile_picture
-            $role // role
+            $role,             // Position
+            $department,       // Department
+            $email,            // Email
+            $tel,              // Tel
+            $full_name,        // Name
+            $profile_picture,  // profile_picture
+            $role              // role
         );
 
         if ($stmt_employees->execute()) {
-            echo "ข้อมูลได้ถูกย้ายไปยังตาราง employees เรียบร้อยแล้ว!";
+            echo "<script>
+                alert('ลงทะเบียนสำเร็จ! ข้อมูลได้ถูกย้ายไปยังตาราง employees เรียบร้อยแล้ว');
+                window.location.href = 'login.php';
+            </script>";
         } else {
             echo "เกิดข้อผิดพลาดในการย้ายข้อมูล: " . $stmt_employees->error;
         }
 
         // ปิด statement ของ employees หลังจากการใช้งานเสร็จ
         $stmt_employees->close();
+    } else {
+        echo "<script>
+            alert('ลงทะเบียนสำเร็จ!');
+            window.location.href = 'login.php';
+        </script>";
     }
 } else {
     echo "เกิดข้อผิดพลาดในการบันทึกข้อมูลในตาราง users: " . $stmt_users->error;

@@ -10,18 +10,8 @@ if (!isset($_SESSION['Username'])) {
 
 $user_name = $_SESSION['Username'];
 
-// เชื่อมต่อฐานข้อมูล
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "leaveform";
-
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-if ($conn->connect_error) {
-    echo "ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " . $conn->connect_error;
-    exit;
-}
+// รวมไฟล์เชื่อมต่อฐานข้อมูล
+include('connect.php');  // เชื่อมต่อกับไฟล์ connect.php ที่สร้างขึ้น
 
 // ดึงข้อมูลตำแหน่งจากตาราง users
 $sql = "SELECT firstname, lastname, role FROM users WHERE username = ?";

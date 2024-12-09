@@ -1,17 +1,8 @@
 <?php
 session_start();
 
-// เชื่อมต่อฐานข้อมูล
-$servername = "localhost";
-$dbusername = "root";
-$dbpassword = "";
-$dbname = "leaveform";
-
-$conn = new mysqli($servername, $dbusername, $dbpassword, $dbname);
-
-if ($conn->connect_error) {
-    die("ไม่สามารถเชื่อมต่อฐานข้อมูลได้: " . $conn->connect_error);
-}
+// รวมไฟล์เชื่อมต่อฐานข้อมูล
+include('connect.php');  // เชื่อมต่อกับไฟล์ connect.php ที่สร้างขึ้น
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $username = trim($_POST['username']);
@@ -47,3 +38,4 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 $conn->close();
+?>
