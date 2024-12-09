@@ -1,15 +1,14 @@
 <?php
-// ตั้งค่าการเชื่อมต่อฐานข้อมูล
-$servername = "localhost";  // ชื่อเซิร์ฟเวอร์ฐานข้อมูล (อาจเป็น localhost หรือ IP ของเซิร์ฟเวอร์)
-$username = "root";         // ชื่อผู้ใช้ฐานข้อมูล
-$password = "";             // รหัสผ่านฐานข้อมูล
-$dbname = "leaveform"; // ชื่อฐานข้อมูล
+// เชื่อมต่อฐานข้อมูล
+$servername = "202.28.34.205";
+$username = "64011211132";
+$password = "64011211132";
+$dbname = "db64011211132";  // ชื่อฐานข้อมูลที่ใช้
 
-// สร้างการเชื่อมต่อ
-$mysqli = new mysqli($servername, $username, $password, $dbname);
+$conn = new mysqli($servername, $username, $password, $dbname);
 
 // ตรวจสอบการเชื่อมต่อ
-if ($mysqli->connect_error) {
-    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $mysqli->connect_error);
+if ($conn->connect_error) {
+    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
 }
 ?>

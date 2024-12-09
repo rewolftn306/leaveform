@@ -1,15 +1,10 @@
 <?php
-// เชื่อมต่อฐานข้อมูล
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "leaveform";  // ชื่อฐานข้อมูลที่ใช้
+// รวมไฟล์เชื่อมต่อฐานข้อมูล
+include('connect.php'); // ตรวจสอบว่า path ถูกต้อง
 
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// ตรวจสอบการเชื่อมต่อ
-if ($conn->connect_error) {
-    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
+// ตรวจสอบการเชื่อมต่อฐานข้อมูล
+if (!$conn) {
+    die("ไม่สามารถเชื่อมต่อฐานข้อมูลได้");
 }
 
 // รับค่าจากฟอร์ม
@@ -61,8 +56,8 @@ if ($stmt_users->execute()) {
         $full_name = $firstname . ' ' . $lastname;
 
         // สร้างคำสั่ง SQL เพื่อแทรกข้อมูลลงในตาราง employees
-        $sql_employees = "INSERT INTO employees (EmployeeID, Name, Position, Department, StartOfWork, Email, Tel, profile_picture, role)
-                          VALUES (?, ?, ?, ?, NOW(), ?, ?, ?, ?)";
+        $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role)
+                          VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)";
 
         // เตรียมคำสั่ง SQL สำหรับ employees
         $stmt_employees = $conn->prepare($sql_employees);
@@ -71,13 +66,13 @@ if ($stmt_users->execute()) {
         }
 
         // ผูกค่าตัวแปรกับคำสั่ง SQL
-        $stmt_employees->bind_param("issssssss",
+        $stmt_employees->bind_param("isssssss",
             $last_inserted_id, // EmployeeID
-            $full_name, // Name
             $role, // Position
             $department, // Department
             $email, // Email
             $tel, // Tel
+            $full_name, // Name
             $profile_picture, // profile_picture
             $role // role
         );
