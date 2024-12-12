@@ -18,11 +18,24 @@ if ($conn->connect_error) {
 $search_query = '';
 if (isset($_POST['search_term'])) {
     $search_term = $conn->real_escape_string($_POST['search_term']);
-    $search_query = "WHERE EmployeeName LIKE '%$search_term%'"; // ตัวอย่างการค้นหาจากชื่อ
+    $search_query = "WHERE e.Name LIKE '%$search_term%'"; // ค้นหาจากชื่อในตาราง employees
 }
 
-// ดึงข้อมูลการขอลาจากฐานข้อมูล
-$sql = "SELECT * FROM leaveapplications $search_query";
+// ดึงข้อมูลการขอลาจากฐานข้อมูลพร้อมชื่อจากตาราง employees และ LeaveName จาก leavetypes
+$sql = "SELECT 
+            la.ApplicationID, 
+            la.EmployeeID, 
+            la.LeaveTypeID, 
+            la.StartDate, 
+            la.EndDate, 
+            la.ApprovalStatus, 
+            la.Remarks, 
+            e.Name AS EmployeeName,
+            lt.LeaveName
+        FROM leaveapplications la
+        JOIN employees e ON la.EmployeeID = e.EmployeeID
+        JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
+        $search_query";
 $result = $conn->query($sql);
 
 // ตรวจสอบว่ามีข้อมูลหรือไม่
@@ -35,11 +48,11 @@ if ($result && $result->num_rows > 0) {
 
 // ตรวจสอบการอนุมัติคำขอ
 if (isset($_POST['approve_leave'])) {
-    $leave_id = $_POST['leave_id'];
+    $leave_id = $_POST['leave_id']; // ใช้ ApplicationID
     $status = 'Approved'; // หรือสามารถตั้งค่าสถานะที่ต้องการ
 
     // อัปเดตสถานะการลาในฐานข้อมูล
-    $update_sql = "UPDATE leaveapplications SET status = ? WHERE leave_id = ?";
+    $update_sql = "UPDATE leaveapplications SET ApprovalStatus = ? WHERE ApplicationID = ?";
     $stmt = $conn->prepare($update_sql);
     $stmt->bind_param('si', $status, $leave_id);
 
@@ -184,22 +197,25 @@ $conn->close();
             <tr>
                 <th>ลำดับ</th>
                 <th>ชื่อ</th>
-                <th>ประเภท</th>
-                <th>เวลา</th>
+                <th>ประเภทการลา</th>
+                <th>วันที่เริ่ม</th>
+                <th>วันที่สิ้นสุด</th>
                 <th>สถานะ</th>
+                <th>หมายเหตุ</th>
                 <th>การดำเนินการ</th>
             </tr>
         </thead>
         <tbody>
             <?php
             if (empty($leaves)) {
-                echo "<tr><td colspan='6'>ไม่พบข้อมูล</td></tr>";
+                echo "<tr><td colspan='8'>ไม่พบข้อมูล</td></tr>";
             } else {
                 foreach ($leaves as $index => $leave) {
                     $name = htmlspecialchars($leave['EmployeeName'] ?? 'ไม่พบชื่อ');
-                    $type = htmlspecialchars($leave['LeaveTypeID'] ?? 'ไม่พบประเภท'). " . " . htmlspecialchars($leave['LeaveName'] ?? 'ไม่พบประเภท');;
+                    $type = htmlspecialchars($leave['LeaveName'] ?? 'ไม่พบประเภท');
                     $timeRange = htmlspecialchars($leave['StartDate'] ?? 'ไม่พบเวลา') . " ถึง " . htmlspecialchars($leave['EndDate'] ?? 'ไม่พบเวลา');
                     $status = htmlspecialchars($leave['ApprovalStatus'] ?? 'ไม่พบสถานะ');
+                    $remarks = htmlspecialchars($leave['Remarks'] ?? 'ไม่มีหมายเหตุ');
                     
                     echo "<tr>
                             <td>" . ($index + 1) . "</td>
@@ -207,22 +223,22 @@ $conn->close();
                             <td>" . $type . "</td>
                             <td>" . $timeRange . "</td>
                             <td>" . $status . "</td>
+                            <td>" . $remarks . "</td>
                             <td>
                                 <form method='POST'>
-                                    <input type='hidden' name='leave_id' value='" . htmlspecialchars($leave['leave_id'] ?? '') . "'>
+                                    <input type='hidden' name='leave_id' value='" . htmlspecialchars($leave['ApplicationID']) . "'>
                                     <button type='submit' name='approve_leave'>อนุมัติ</button>
                                 </form>
                             </td>
                         </tr>";
                 }
             }
-            
             ?>
         </tbody>
     </table>
 
     <div class="table-footer">
-        <div>แสดงผลจากข้อมูล 10 รายการจากทั้งหมด <?php echo count($leaves); ?> รายการ</div>
+        <div>แสดงผลจากข้อมูล <?php echo count($leaves); ?> รายการ</div>
         <button>โหลดเพิ่มเติม</button>
     </div>
 
