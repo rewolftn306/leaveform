@@ -64,13 +64,12 @@ $tableData = [];
 $sql = "
     SELECT 
         employees.Name AS name,
-        SUM(CASE WHEN leavetypes.LeaveName = 'ลาป่วย' THEN 1 ELSE 0 END) AS sick_leave,
-        SUM(CASE WHEN leavetypes.LeaveName = 'ลากิจส่วนตัว' THEN 1 ELSE 0 END) AS personal_leave,
-        SUM(CASE WHEN leavetypes.LeaveName = 'ลาพักผ่อน' THEN 1 ELSE 0 END) AS vacation_leave,
-        COUNT(*) AS total_leave
-    FROM leaveapplications
-    INNER JOIN employees ON leaveapplications.EmployeeID = employees.EmployeeID
-    INNER JOIN leavetypes ON leaveapplications.LeaveTypeID = leavetypes.LeaveTypeID
+        SUM(CASE WHEN leaveapplications.LeaveTypeID = 1 THEN 1 ELSE 0 END) AS sick_leave,
+        SUM(CASE WHEN leaveapplications.LeaveTypeID = 2 THEN 1 ELSE 0 END) AS personal_leave,
+        SUM(CASE WHEN leaveapplications.LeaveTypeID = 3 THEN 1 ELSE 0 END) AS vacation_leave,
+        COUNT(leaveapplications.ApplicationID) AS total_leave
+    FROM employees
+    LEFT JOIN leaveapplications ON employees.EmployeeID = leaveapplications.EmployeeID
     GROUP BY employees.Name
 ";
 $result = $conn->query($sql);
@@ -79,6 +78,7 @@ if ($result && $result->num_rows > 0) {
         $tableData[] = $row;
     }
 }
+
 
 $conn->close();
 ?>
