@@ -39,18 +39,20 @@ $chartData = [
 ];
 
 $sql = "
-    SELECT leave_type, COUNT(*) as count
+    SELECT leavetypes.LeaveName AS leave_type, COUNT(*) as count
     FROM leaveapplications
-    GROUP BY leave_type
+    INNER JOIN leavetypes ON leaveapplications.LeaveTypeID = leavetypes.LeaveTypeID
+    GROUP BY leavetypes.LeaveName
 ";
+
 $result = $conn->query($sql);
 if ($result && $result->num_rows > 0) {
     while ($row = $result->fetch_assoc()) {
         if ($row['leave_type'] == 'ลาป่วย') {
             $chartData['sick_leave'] = $row['count'];
-        } elseif ($row['leave_type'] == 'ลากิจ') {
+        } elseif ($row['leave_type'] == 'ลากิจส่วนตัว') {
             $chartData['personal_leave'] = $row['count'];
-        } elseif ($row['leave_type'] == 'ลาพักร้อน') {
+        } elseif ($row['leave_type'] == 'ลาพักผ่อน') {
             $chartData['vacation_leave'] = $row['count'];
         }
     }
@@ -62,12 +64,13 @@ $tableData = [];
 $sql = "
     SELECT 
         employees.Name AS name,
-        SUM(CASE WHEN leave_type = 'ลาป่วย' THEN 1 ELSE 0 END) AS sick_leave,
-        SUM(CASE WHEN leave_type = 'ลากิจ' THEN 1 ELSE 0 END) AS personal_leave,
-        SUM(CASE WHEN leave_type = 'ลาพักร้อน' THEN 1 ELSE 0 END) AS vacation_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลาป่วย' THEN 1 ELSE 0 END) AS sick_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลากิจส่วนตัว' THEN 1 ELSE 0 END) AS personal_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลาพักผ่อน' THEN 1 ELSE 0 END) AS vacation_leave,
         COUNT(*) AS total_leave
     FROM leaveapplications
-    INNER JOIN employees ON leaveapplications.empid = employees.EmployeeID
+    INNER JOIN employees ON leaveapplications.EmployeeID = employees.EmployeeID
+    INNER JOIN leavetypes ON leaveapplications.LeaveTypeID = leavetypes.LeaveTypeID
     GROUP BY employees.Name
 ";
 $result = $conn->query($sql);
@@ -76,6 +79,7 @@ if ($result && $result->num_rows > 0) {
         $tableData[] = $row;
     }
 }
+
 $conn->close();
 ?>
 <!DOCTYPE html>
