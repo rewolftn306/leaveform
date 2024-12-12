@@ -1,17 +1,6 @@
 <?php
-// การเชื่อมต่อฐานข้อมูล
-$servername = "localhost";
-$username = "root";
-$password = "";
-$dbname = "leaveform"; // ชื่อฐานข้อมูลของคุณ
-
-// สร้างการเชื่อมต่อ
-$conn = new mysqli($servername, $username, $password, $dbname);
-
-// ตรวจสอบการเชื่อมต่อ
-if ($conn->connect_error) {
-    die("การเชื่อมต่อล้มเหลว: " . $conn->connect_error);
-}
+// เชื่อมต่อฐานข้อมูลจากไฟล์ connect.php
+include('connect.php');
 
 // รับค่าจากฟอร์ม
 $employeeID = $_POST['empid']; // รหัสพนักงาน
