@@ -18,7 +18,7 @@ if ($conn->connect_error) {
 $search_query = '';
 if (isset($_POST['search_term'])) {
     $search_term = $conn->real_escape_string($_POST['search_term']);
-    $search_query = "WHERE ENAME LIKE '%$search_term%'"; // ตัวอย่างการค้นหาจากชื่อ
+    $search_query = "WHERE EmployeeName LIKE '%$search_term%'"; // ตัวอย่างการค้นหาจากชื่อ
 }
 
 // ดึงข้อมูลการขอลาจากฐานข้อมูล
@@ -196,16 +196,16 @@ $conn->close();
                 echo "<tr><td colspan='6'>ไม่พบข้อมูล</td></tr>";
             } else {
                 foreach ($leaves as $index => $leave) {
-                    $name = htmlspecialchars($leave['ENAME'] ?? 'ไม่พบชื่อ');
-                    $type = htmlspecialchars($leave['leave_type'] ?? 'ไม่พบประเภท');
-                    $time = htmlspecialchars($leave['leave_time'] ?? 'ไม่พบเวลา');
-                    $status = htmlspecialchars($leave['status'] ?? 'ไม่พบสถานะ');
-                
+                    $name = htmlspecialchars($leave['EmployeeName'] ?? 'ไม่พบชื่อ');
+                    $type = htmlspecialchars($leave['LeaveTypeID'] ?? 'ไม่พบประเภท'). " . " . htmlspecialchars($leave['LeaveName'] ?? 'ไม่พบประเภท');;
+                    $timeRange = htmlspecialchars($leave['StartDate'] ?? 'ไม่พบเวลา') . " ถึง " . htmlspecialchars($leave['EndDate'] ?? 'ไม่พบเวลา');
+                    $status = htmlspecialchars($leave['ApprovalStatus'] ?? 'ไม่พบสถานะ');
+                    
                     echo "<tr>
                             <td>" . ($index + 1) . "</td>
                             <td>" . $name . "</td>
                             <td>" . $type . "</td>
-                            <td>" . $time . "</td>
+                            <td>" . $timeRange . "</td>
                             <td>" . $status . "</td>
                             <td>
                                 <form method='POST'>
@@ -216,6 +216,7 @@ $conn->close();
                         </tr>";
                 }
             }
+            
             ?>
         </tbody>
     </table>
