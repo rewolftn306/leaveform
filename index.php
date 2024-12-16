@@ -13,12 +13,22 @@ $user_name = $_SESSION['Username'];
 // รวมไฟล์เชื่อมต่อฐานข้อมูล
 include('connect.php');  // เชื่อมต่อกับไฟล์ connect.php ที่สร้างขึ้น
 
-// ดึงข้อมูลตำแหน่งจากตาราง users
+// ตรวจสอบการเชื่อมต่อฐานข้อมูล
+if ($conn->connect_error) {
+    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
+}
+
+// ดึงข้อมูลตำแหน่งจากตาราง users ด้วย prepared statements
 $sql = "SELECT firstname, lastname, role FROM users WHERE username = ?";
 $stmt = $conn->prepare($sql);
+if (!$stmt) {
+    die("การเตรียมคำสั่ง SQL ล้มเหลว: " . $conn->error);
+}
+
 $stmt->bind_param("s", $user_name);
 $stmt->execute();
 $result = $stmt->get_result();
+
 $firstname = '';
 $lastname = '';
 $role = '';
@@ -46,17 +56,25 @@ $sql = "
 ";
 
 $result = $conn->query($sql);
-if ($result && $result->num_rows > 0) {
+if ($result) {
     while ($row = $result->fetch_assoc()) {
-        if ($row['leave_type'] == 'ลาป่วย') {
-            $chartData['sick_leave'] = $row['count'];
-        } elseif ($row['leave_type'] == 'ลากิจส่วนตัว') {
-            $chartData['personal_leave'] = $row['count'];
-        } elseif ($row['leave_type'] == 'ลาพักผ่อน') {
-            $chartData['vacation_leave'] = $row['count'];
+        switch ($row['leave_type']) {
+            case 'ลาป่วย':
+                $chartData['sick_leave'] = (int)$row['count'];
+                break;
+            case 'ลากิจส่วนตัว':
+                $chartData['personal_leave'] = (int)$row['count'];
+                break;
+            case 'ลาพักผ่อน':
+                $chartData['vacation_leave'] = (int)$row['count'];
+                break;
         }
     }
+} else {
+    // จัดการข้อผิดพลาดเมื่อคำสั่ง SQL ล้มเหลว
+    die("เกิดข้อผิดพลาดในการดึงข้อมูลกราฟ: " . $conn->error);
 }
+
 $jsonChartData = json_encode(array_values($chartData));
 
 // ดึงข้อมูลสำหรับตาราง
@@ -64,21 +82,24 @@ $tableData = [];
 $sql = "
     SELECT 
         employees.Name AS name,
-        SUM(CASE WHEN leaveapplications.LeaveTypeID = 1 THEN 1 ELSE 0 END) AS sick_leave,
-        SUM(CASE WHEN leaveapplications.LeaveTypeID = 2 THEN 1 ELSE 0 END) AS personal_leave,
-        SUM(CASE WHEN leaveapplications.LeaveTypeID = 3 THEN 1 ELSE 0 END) AS vacation_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลาป่วย' THEN 1 ELSE 0 END) AS sick_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลากิจส่วนตัว' THEN 1 ELSE 0 END) AS personal_leave,
+        SUM(CASE WHEN leavetypes.LeaveName = 'ลาพักผ่อน' THEN 1 ELSE 0 END) AS vacation_leave,
         COUNT(leaveapplications.ApplicationID) AS total_leave
     FROM employees
     LEFT JOIN leaveapplications ON employees.EmployeeID = leaveapplications.EmployeeID
+    LEFT JOIN leavetypes ON leaveapplications.LeaveTypeID = leavetypes.LeaveTypeID
     GROUP BY employees.Name
 ";
 $result = $conn->query($sql);
-if ($result && $result->num_rows > 0) {
+if ($result) {
     while ($row = $result->fetch_assoc()) {
         $tableData[] = $row;
     }
+} else {
+    // จัดการข้อผิดพลาดเมื่อคำสั่ง SQL ล้มเหลว
+    die("เกิดข้อผิดพลาดในการดึงข้อมูลตาราง: " . $conn->error);
 }
-
 
 $conn->close();
 ?>
@@ -129,6 +150,7 @@ $conn->close();
             border-radius: 10px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             overflow: hidden;
+            padding: 20px;
         }
 
         .header {
@@ -138,37 +160,36 @@ $conn->close();
             text-align: center;
             font-size: 20px;
             font-weight: bold;
+            border-radius: 5px;
         }
 
         .profile-section {
             display: flex;
+            flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            padding: 15px;
+            padding: 15px 0;
             border-bottom: 1px solid #ddd;
         }
 
-        .profile-section img {
-            width: 60px;
-            height: 60px;
-            border-radius: 50%;
-            margin-right: 15px;
-        }
-
         .profile-details {
-            line-height: 1.2;
+            line-height: 1.5;
         }
 
         .profile-details h4 {
             margin: 0;
-            font-size: 16px;
+            font-size: 18px;
             color: #333;
         }
 
         .profile-details p {
-            margin: 0;
+            margin: 5px 0 0 0;
             font-size: 14px;
             color: #666;
+        }
+
+        .buttons {
+            margin-top: 10px;
         }
 
         .btn-submit, .btn-approve {
@@ -180,6 +201,7 @@ $conn->close();
             border-radius: 5px;
             font-size: 14px;
             font-weight: bold;
+            margin: 5px 0;
         }
 
         .btn-submit:hover, .btn-approve:hover {
@@ -187,13 +209,14 @@ $conn->close();
         }
 
         .chart-container {
-            width: 50%; /* ปรับขนาดความกว้างของกราฟ */
+            width: 100%;
+            max-width: 600px;
             margin: 20px auto;
         }
 
         #leaveChart {
-            width: 100% !important; /* ทำให้กราฟขยายตามขนาดของ container */
-            height: 250px !important; /* ปรับความสูงของกราฟ */
+            width: 100% !important;
+            height: 250px !important;
         }
 
         .table-container {
@@ -205,11 +228,12 @@ $conn->close();
         table {
             width: 100%;
             border-collapse: collapse;
+            min-width: 600px;
         }
 
         table th, table td {
             border: 1px solid #ddd;
-            padding: 8px;
+            padding: 12px 15px;
             text-align: left;
         }
 
@@ -236,12 +260,39 @@ $conn->close();
             color: #007bff;
             font-weight: bold;
         }
+
+        /* Responsive Design */
+        @media (max-width: 768px) {
+            .profile-section {
+                flex-direction: column;
+                align-items: flex-start;
+            }
+
+            .buttons {
+                width: 100%;
+                display: flex;
+                flex-direction: column;
+            }
+
+            .btn-submit, .btn-approve {
+                width: 100%;
+                text-align: center;
+            }
+
+            .chart-container {
+                max-width: 100%;
+            }
+
+            table {
+                min-width: 100%;
+            }
+        }
     </style>
 </head>
 <body>
     <!-- แถบผู้ใช้งาน -->
     <div class="user-bar">
-        <span>สวัสดี, <?= htmlspecialchars($user_name); ?> | <a href="logout.php">ออกจากระบบ</a></span>
+        <span>สวัสดี, <?= htmlspecialchars($user_name, ENT_QUOTES, 'UTF-8'); ?> | <a href="logout.php">ออกจากระบบ</a></span>
     </div>
 
     <div class="main-container">
@@ -250,22 +301,29 @@ $conn->close();
         <!-- ข้อมูลโปรไฟล์ -->
         <div class="profile-section">
             <div class="profile-details">
-                <h4>ชื่อ: <?= htmlspecialchars($firstname . ' ' . $lastname); ?></h4>
-                <p>ตำแหน่ง: <?= $role === 'Employee' ? 'พนักงาน' : ($role === 'Director' ? 'อธิบดี' : 'ไม่ระบุ'); ?></p>
+                <h4>ชื่อ: <?= htmlspecialchars($firstname . ' ' . $lastname, ENT_QUOTES, 'UTF-8'); ?></h4>
+                <p>ตำแหน่ง: <?= htmlspecialchars(
+                    ($role === 'Employee') ? 'พนักงาน' : (($role === 'Director') ? 'อธิบดี' : 'ไม่ระบุ'),
+                    ENT_QUOTES,
+                    'UTF-8'
+                ); ?></p>
             </div>
-            <div>
+            <div class="buttons">
                 <a href="inputform.php" class="btn-submit">ยื่นแบบฟอร์มการลา</a>
-                <?php if ($role == 'Director') : ?>
+                <?php if ($role === 'Director') : ?>
                     <a href="approve_leave.php" class="btn-approve">อนุมัติการลา</a>
                 <?php endif; ?>
             </div>
         </div>
 
         <!-- กราฟแสดงสถิติ -->
-        <div class="chart-container">
-        <canvas id="leaveChart"></canvas>
-        </div>
-
+        <?php if (array_sum($chartData) > 0) : ?>
+            <div class="chart-container">
+                <canvas id="leaveChart" aria-label="กราฟสถิติการลางาน" role="img"></canvas>
+            </div>
+        <?php else : ?>
+            <p style="text-align: center;">ไม่มีข้อมูลการลางานเพื่อแสดงกราฟ</p>
+        <?php endif; ?>
 
         <!-- ตารางสรุปข้อมูลการลางาน -->
         <div class="table-container">
@@ -275,7 +333,7 @@ $conn->close();
                     <tr>
                         <th>ชื่อพนักงาน</th>
                         <th>ลาป่วย (ครั้ง)</th>
-                        <th>ลากิจ (ครั้ง)</th>
+                        <th>ลากิจส่วนตัว (ครั้ง)</th>
                         <th>ลาพักร้อน (ครั้ง)</th>
                         <th>รวมทั้งหมด (ครั้ง)</th>
                     </tr>
@@ -284,11 +342,11 @@ $conn->close();
                     <?php if (!empty($tableData)) : ?>
                         <?php foreach ($tableData as $row) : ?>
                             <tr>
-                                <td><?= htmlspecialchars($row['name']); ?></td>
-                                <td><?= $row['sick_leave']; ?></td>
-                                <td><?= $row['personal_leave']; ?></td>
-                                <td><?= $row['vacation_leave']; ?></td>
-                                <td><?= $row['total_leave']; ?></td>
+                                <td><?= htmlspecialchars($row['name'], ENT_QUOTES, 'UTF-8'); ?></td>
+                                <td><?= (int)$row['sick_leave']; ?></td>
+                                <td><?= (int)$row['personal_leave']; ?></td>
+                                <td><?= (int)$row['vacation_leave']; ?></td>
+                                <td><?= (int)$row['total_leave']; ?></td>
                             </tr>
                         <?php endforeach; ?>
                     <?php else : ?>
@@ -302,28 +360,47 @@ $conn->close();
     </div>
 
     <script>
-        // กราฟแสดงสถิติการลางาน
-        var ctx = document.getElementById('leaveChart').getContext('2d');
-        var leaveChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: ['ลาป่วย', 'ลากิจ', 'ลาพักร้อน'],
-                datasets: [{
-                    label: 'จำนวนการลา',
-                    data: <?= $jsonChartData ?>,
-                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
-                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                scales: {
-                    y: {
-                        beginAtZero: true
+        <?php if (array_sum($chartData) > 0) : ?>
+            // กราฟแสดงสถิติการลางาน
+            var ctx = document.getElementById('leaveChart').getContext('2d');
+            var leaveChart = new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: ['ลาป่วย', 'ลากิจส่วนตัว', 'ลาพักผ่อน'],
+                    datasets: [{
+                        label: 'จำนวนการลา',
+                        data: <?= $jsonChartData ?>,
+                        backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
+                        borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            ticks: {
+                                precision:0
+                            }
+                        }
+                    },
+                    plugins: {
+                        legend: {
+                            display: false
+                        },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    return context.parsed.y + ' ครั้ง';
+                                }
+                            }
+                        }
                     }
                 }
-            }
-        });
+            });
+        <?php endif; ?>
     </script>
 </body>
 </html>
