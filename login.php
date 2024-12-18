@@ -4,91 +4,36 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>เข้าสู่ระบบ</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
             background: linear-gradient(to bottom right, #FFFFFF, #6699FF);
-            margin: 0;
-            padding: 0;
             display: flex;
-            flex-direction: column;
-            justify-content: center;
             align-items: center;
+            justify-content: center;
             height: 100vh;
         }
-
-        .header {
-            width: 100%;
-            background-color: #000;
-            padding: 0;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            position: absolute;
-            top: 0;
-        }
-
-        .header img {
-            width: 100%;
-            height: auto;
-        }
-
         .login-container {
-            background-color: rgba(0, 0, 0, 0.7);
+            background-color: rgba(0, 0, 0, 0.8);
             border-radius: 8px;
             padding: 40px;
-            width: 300px;
-            text-align: center;
-            margin-top: 150px;
-        }
-
-        h1 {
-            font-size: 24px;
+            width: 350px;
             color: white;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
         }
-
-        .input-group {
+        .login-container h1 {
             margin-bottom: 20px;
-            text-align: left;
+            text-align: center;
         }
-
-        .input-group label {
-            font-size: 14px;
-            color: white;
-        }
-
-        .input-group input {
-            width: 100%;
-            padding: 10px;
-            margin-top: 5px;
-            font-size: 16px;
-            border: 1px solid #ccc;
-            border-radius: 4px;
-            outline: none;
-        }
-
         .login-btn {
-            background-color: #007bff;
-            color: white;
-            border: none;
-            padding: 10px 20px;
-            border-radius: 4px;
-            cursor: pointer;
             width: 100%;
-            font-size: 16px;
-        }
-
-        .login-btn:hover {
-            background-color: #0056b3;
-        }
-
-        .error-message {
-            color: red;
-            font-size: 14px;
             margin-top: 10px;
         }
-
-        /* สไตล์สำหรับปุ่มสำหรับผู้พัฒนา */
+        .error-message {
+            color: red;
+            margin-top: 10px;
+            text-align: center;
+        }
         .developer-btn {
             position: fixed;
             bottom: 20px;
@@ -102,31 +47,35 @@
             text-decoration: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
-
         .developer-btn:hover {
             background-color: #e64a19;
+        }
+        .header img {
+            width: 100%;
+            height: auto;
+            margin-bottom: 20px;
         }
     </style>
 </head>
 <body>
-    <div class="header">
-        <img src="ITMSU.png" alt="Logo">
-    </div>
-
     <div class="login-container">
-        <form action="process_login.php" method="POST">
-            <h1>เข้าสู่ระบบ</h1>
-            <div class="input-group">
-                <label for="username">Username</label>
-                <input type="text" id="username" name="username" placeholder="Username" required>
+        <img src="ITMSU.png" alt="Logo">
+        <h1>เข้าสู่ระบบ</h1>
+        <form action="process_login.php" method="POST" novalidate>
+            <div class="mb-3">
+                <label for="username" class="form-label">ชื่อผู้ใช้</label>
+                <input type="text" id="username" name="username" class="form-control" placeholder="ชื่อผู้ใช้" required>
             </div>
-            <div class="input-group">
-                <label for="password">Password</label>
-                <input type="password" id="password" name="password" placeholder="Password" required>
+            <div class="mb-3">
+                <label for="password" class="form-label">รหัสผ่าน</label>
+                <input type="password" id="password" name="password" class="form-control" placeholder="รหัสผ่าน" required>
             </div>
-            <button type="submit" class="login-btn">เข้าสู่ระบบ</button>
+            <button type="submit" class="btn btn-primary login-btn">เข้าสู่ระบบ</button>
             <?php if (isset($_GET['error'])): ?>
                 <p class="error-message"><?= htmlspecialchars($_GET['error']); ?></p>
+            <?php endif; ?>
+            <?php if (isset($_GET['message'])): ?>
+                <p class="text-success text-center"><?= htmlspecialchars($_GET['message']); ?></p>
             <?php endif; ?>
         </form>
     </div>
@@ -134,5 +83,17 @@
     <!-- ปุ่มสำหรับผู้พัฒนา -->
     <a href="register.php" class="developer-btn">ไปที่หน้าลงทะเบียน</a>
 
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <!-- JavaScript สำหรับแสดงป๊อปอัพแจ้งเตือน -->
+    <script>
+        <?php if (isset($_GET['success'])): ?>
+            alert("<?= addslashes($_GET['success']); ?>");
+        <?php endif; ?>
+        <?php if (isset($_GET['error'])): ?>
+            alert("<?= addslashes($_GET['error']); ?>");
+        <?php endif; ?>
+    </script>
 </body>
 </html>

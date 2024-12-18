@@ -1,27 +1,31 @@
 <?php
+// approve_leave.php
 session_start();
 
-// ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือยัง
+// ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
 if (!isset($_SESSION['Username'])) {
     header("Location: login.php");
     exit;
 }
 
-// เชื่อมต่อฐานข้อมูล
 include('connect.php');
 
-if ($conn->connect_error) {
-    die("การเชื่อมต่อฐานข้อมูลล้มเหลว: " . $conn->connect_error);
+// สร้าง CSRF Token
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// ฟังก์ชันค้นหาข้อมูลการลา
 $search_query = '';
-if (isset($_POST['search_term'])) {
-    $search_term = $conn->real_escape_string($_POST['search_term']);
-    $search_query = "WHERE e.Name LIKE '%$search_term%'"; // ค้นหาจากชื่อในตาราง employees
+$params = [];
+$types = '';
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search_term'])) {
+    $search_term = '%' . $_POST['search_term'] . '%';
+    $search_query = "WHERE e.Name LIKE ?";
+    $params[] = $search_term;
+    $types .= 's';
 }
 
-// ดึงข้อมูลการขอลาจากฐานข้อมูลพร้อมชื่อจากตาราง employees และ LeaveName จาก leavetypes
 $sql = "SELECT 
             la.ApplicationID, 
             la.EmployeeID, 
@@ -35,213 +39,184 @@ $sql = "SELECT
         FROM leaveapplications la
         JOIN employees e ON la.EmployeeID = e.EmployeeID
         JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-        $search_query";
-$result = $conn->query($sql);
+        $search_query
+        ORDER BY la.ApplicationID DESC";
 
-// ตรวจสอบว่ามีข้อมูลหรือไม่
+$stmt = $conn->prepare($sql);
+if ($search_query) {
+    $stmt->bind_param($types, ...$params);
+}
+
+$stmt->execute();
+$result = $stmt->get_result();
+
 $leaves = [];
-if ($result && $result->num_rows > 0) {
+if ($result) {
     while ($row = $result->fetch_assoc()) {
         $leaves[] = $row;
     }
 }
 
 // ตรวจสอบการอนุมัติคำขอ
-if (isset($_POST['approve_leave'])) {
-    $leave_id = $_POST['leave_id']; // ใช้ ApplicationID
-    $status = 'Approved'; // หรือสามารถตั้งค่าสถานะที่ต้องการ
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_leave'])) {
+    // ตรวจสอบ CSRF Token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid CSRF token");
+    }
 
-    // อัปเดตสถานะการลาในฐานข้อมูล
+    $leave_id = intval($_POST['leave_id']);
+    $status = 'Approved';
+
     $update_sql = "UPDATE leaveapplications SET ApprovalStatus = ? WHERE ApplicationID = ?";
-    $stmt = $conn->prepare($update_sql);
-    $stmt->bind_param('si', $status, $leave_id);
+    $update_stmt = $conn->prepare($update_sql);
+    $update_stmt->bind_param('si', $status, $leave_id);
 
-    if ($stmt->execute()) {
-        header("Location: approve_leave.php?success=1"); // รีเฟรชหน้าหลังการอนุมัติ
+    if ($update_stmt->execute()) {
+        header("Location: approve_leave.php?success=1");
         exit;
     } else {
-        echo "การอนุมัติลาล้มเหลว: " . $stmt->error;
+        echo "การอนุมัติลาล้มเหลว: " . htmlspecialchars($update_stmt->error);
     }
-    $stmt->close();
+
+    $update_stmt->close();
 }
 
 $conn->close();
 ?>
-
 <!DOCTYPE html>
 <html lang="th">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>การค้นหาข้อมูล</title>
+    <title>การอนุมัติการลา</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
             background-color: #f4f4f9;
-            padding: 20px;
-            margin: 0;
+            padding-top: 70px;
         }
         .header {
-            background-color: #333;
+            background-color: #343a40;
             color: white;
-            padding: 10px 20px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
+            padding: 15px;
         }
         .header .logo {
-            font-size: 20px;
+            font-size: 24px;
             font-weight: bold;
-        }
-        .header .user-info {
-            display: flex;
-            align-items: center;
         }
         .header .user-info span {
             margin-right: 10px;
-        }
-        .header .user-info button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 6px 12px;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        .header .user-info button:hover {
-            opacity: 0.8;
-        }
-        .container {
-            max-width: 1200px;
-            margin: 0 auto;
-            margin-top: 20px;
-        }
-        .search-bar {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 20px;
-            background-color: white;
-            padding: 20px;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        .search-bar input {
-            padding: 10px;
-            border: 1px solid #ddd;
-            border-radius: 4px;
-            font-size: 14px;
-            width: 80%;
-        }
-        .search-bar button {
-            background-color: #4CAF50;
-            color: white;
-            padding: 10px 20px;
-            border: none;
-            cursor: pointer;
-            border-radius: 4px;
-        }
-        .search-bar button:hover {
-            opacity: 0.8;
-        }
-        table {
-            width: 100%;
-            border-collapse: collapse;
-            margin-top: 20px;
-            background-color: white;
-            border-radius: 8px;
-            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-        }
-        th, td {
-            padding: 10px;
-            border: 1px solid #ddd;
-            text-align: left;
-        }
-        th {
-            background-color: #f0f0f0;
-        }
-        tr:nth-child(even) {
-            background-color: #f9f9f9;
-        }
-        .table-footer {
-            display: flex;
-            justify-content: space-between;
-            padding: 10px;
         }
     </style>
 </head>
 <body>
 
-<div class="header">
-    <div class="logo">ระบบการลาของบุคลากร มหาวิทยาลัยมหาสารคาม</div>
-    <div class="user-info">
-        <span>ยินดีต้อนรับ, <?php echo htmlspecialchars($_SESSION['Username']); ?></span>
-        <form method="POST" action="logout.php">
-            <button type="submit" name="logout">ออกจากระบบ</button>
-        </form>
-    </div>
-</div>
-
-<div class="container">
-
-    <!-- ค้นหาข้อมูล -->
-    <form method="POST">
-        <div class="search-bar">
-            <input type="text" name="search_term" placeholder="ค้นหาข้อมูล..." value="<?php echo isset($_POST['search_term']) ? htmlspecialchars($_POST['search_term']) : ''; ?>">
-            <button type="submit">ค้นหา</button>
+    <!-- Header -->
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
+        <div class="container-fluid">
+            <span class="navbar-brand">ระบบการลาของบุคลากร มหาวิทยาลัยมหาสารคาม</span>
+            <div class="d-flex">
+                <span class="navbar-text me-3">ยินดีต้อนรับ, <?= htmlspecialchars($_SESSION['Username']); ?></span>
+                <form method="POST" action="logout.php" class="d-inline">
+                    <button type="submit" name="logout" class="btn btn-outline-light">ออกจากระบบ</button>
+                </form>
+            </div>
         </div>
-    </form>
+    </nav>
 
-    <!-- ตารางแสดงผล -->
-    <table>
-        <thead>
-            <tr>
-                <th>ลำดับ</th>
-                <th>ชื่อ</th>
-                <th>ประเภทการลา</th>
-                <th>วันที่เริ่ม</th>
-                <th>วันที่สิ้นสุด</th>
-                <th>สถานะ</th>
-                <th>หมายเหตุ</th>
-            </tr>
-        </thead>
-        <tbody>
-            <?php
-            if (empty($leaves)) {
-                echo "<tr><td colspan='8'>ไม่พบข้อมูล</td></tr>";
-            } else {
-                foreach ($leaves as $index => $leave) {
-                    $name = htmlspecialchars($leave['EmployeeName'] ?? 'ไม่พบชื่อ');
-                    $type = htmlspecialchars($leave['LeaveName'] ?? 'ไม่พบประเภท');
-                    $timeRange = htmlspecialchars($leave['StartDate'] ?? 'ไม่พบเวลา') . " ถึง " . htmlspecialchars($leave['EndDate'] ?? 'ไม่พบเวลา');
-                    $status = htmlspecialchars($leave['ApprovalStatus'] ?? 'ไม่พบสถานะ');
-                    $remarks = htmlspecialchars($leave['Remarks'] ?? 'ไม่มีหมายเหตุ');
-                    
-                    echo "<tr>
-                            <td>" . ($index + 1) . "</td>
-                            <td>" . $name . "</td>
-                            <td>" . $type . "</td>
-                            <td>" . $timeRange . "</td>
-                            <td>" . $status . "</td>
-                            <td>" . $remarks . "</td>
-                            <td>
-                                <form method='POST'>
-                                    <input type='hidden' name='leave_id' value='" . htmlspecialchars($leave['ApplicationID']) . "'>
-                                    <button type='submit' name='approve_leave'>อนุมัติ</button>
-                                </form>
-                            </td>
-                        </tr>";
-                }
-            }
-            ?>
-        </tbody>
-    </table>
+    <!-- Main Container -->
+    <div class="container">
 
-    <div class="table-footer">
-        <div>แสดงผลจากข้อมูล <?php echo count($leaves); ?> รายการ</div>
-        <button>โหลดเพิ่มเติม</button>
+        <!-- Search Form -->
+        <form method="POST" class="mt-4">
+            <div class="input-group mb-3">
+                <input type="text" name="search_term" class="form-control" placeholder="ค้นหาข้อมูล..." value="<?= isset($_POST['search_term']) ? htmlspecialchars($_POST['search_term']) : ''; ?>">
+                <button class="btn btn-primary" type="submit">ค้นหา</button>
+            </div>
+        </form>
+
+        <!-- Success Message -->
+        <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                อนุมัติการลาสำเร็จ!
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+
+        <!-- Leaves Table -->
+        <div class="table-responsive">
+            <table class="table table-striped table-bordered">
+                <thead class="table-dark">
+                    <tr>
+                        <th>ลำดับ</th>
+                        <th>ชื่อ</th>
+                        <th>ประเภทการลา</th>
+                        <th>วันที่เริ่ม</th>
+                        <th>วันที่สิ้นสุด</th>
+                        <th>สถานะ</th>
+                        <th>หมายเหตุ</th>
+                        <th>การกระทำ</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php if (empty($leaves)): ?>
+                        <tr>
+                            <td colspan="8" class="text-center">ไม่พบข้อมูล</td>
+                        </tr>
+                    <?php else: ?>
+                        <?php foreach ($leaves as $index => $leave): ?>
+                            <tr>
+                                <td><?= $index + 1; ?></td>
+                                <td><?= htmlspecialchars($leave['EmployeeName']); ?></td>
+                                <td><?= htmlspecialchars($leave['LeaveName']); ?></td>
+                                <td><?= htmlspecialchars($leave['StartDate']); ?></td>
+                                <td><?= htmlspecialchars($leave['EndDate']); ?></td>
+                                <td>
+                                    <?php
+                                        switch ($leave['ApprovalStatus']) {
+                                            case 'Approved':
+                                                echo '<span class="badge bg-success">อนุมัติแล้ว</span>';
+                                                break;
+                                            case 'Pending':
+                                                echo '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                                break;
+                                            case 'Rejected':
+                                                echo '<span class="badge bg-danger">ถูกปฏิเสธ</span>';
+                                                break;
+                                            default:
+                                                echo '<span class="badge bg-secondary">ไม่ทราบ</span>';
+                                        }
+                                    ?>
+                                </td>
+                                <td><?= htmlspecialchars($leave['Remarks']); ?></td>
+                                <td>
+                                    <?php if ($leave['ApprovalStatus'] === 'Pending'): ?>
+                                        <form method="POST" class="d-inline">
+                                            <input type="hidden" name="leave_id" value="<?= intval($leave['ApplicationID']); ?>">
+                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                                            <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm('คุณต้องการอนุมัติการลานี้หรือไม่?');">อนุมัติ</button>
+                                        </form>
+                                    <?php else: ?>
+                                        <button class="btn btn-sm btn-secondary" disabled>ไม่สามารถดำเนินการ</button>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Footer -->
+        <div class="d-flex justify-content-between align-items-center mt-3">
+            <div>แสดงผลจากข้อมูล <?= count($leaves); ?> รายการ</div>
+            <button class="btn btn-secondary" disabled>โหลดเพิ่มเติม</button>
+        </div>
+
     </div>
 
-</div>
-
+    <!-- Bootstrap JS -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
 </body>
 </html>
