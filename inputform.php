@@ -96,16 +96,17 @@ if (isset($_GET['success'])) {
             </div>
 
             <form action="submit_leave.php" method="POST" novalidate>
-                <!-- ลบฟิลด์รหัสพนักงานออกไป -->
-
                 <div class="mb-3">
                     <label for="leave_type" class="form-label">ประเภทการลา:</label>
-                    <select id="leave_type" name="leave_type" class="form-select" required>
+                    <select id="leave_type" name="leave_type" class="form-select" required onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
                             <option value="<?= intval($type['LeaveTypeID']); ?>"><?= htmlspecialchars($type['LeaveName']); ?></option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+                <div id="leave_conditions" class="mb-3">
+                    <!-- แสดงเงื่อนไขการลา -->
                 </div>
                 <div class="mb-3">
                     <label for="start_date" class="form-label">วันที่เริ่มลา:</label>
@@ -127,13 +128,26 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS และ JavaScript สำหรับแสดงเงื่อนไขการลา -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <?php if ($alertType && $alertMessage): ?>
-        <script>
-            // หากต้องการแสดง JavaScript alert สามารถเพิ่มโค้ดนี้ได้
-            // alert('<?= $alertMessage; ?>');
-        </script>
-    <?php endif; ?>
+    <script>
+        function fetchConditions(leaveTypeID) {
+            if (leaveTypeID === "") {
+                document.getElementById('leave_conditions').innerHTML = "";
+                return;
+            }
+            fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
+                .then(response => response.json())
+                .then(data => {
+                    let html = "<h5>เงื่อนไขการลา:</h5><ul>";
+                    data.forEach(condition => {
+                        html += `<li>${condition}</li>`;
+                    });
+                    html += "</ul>";
+                    document.getElementById('leave_conditions').innerHTML = html;
+                })
+                .catch(error => console.error('Error:', error));
+        }
+    </script>
 </body>
 </html>

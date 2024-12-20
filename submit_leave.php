@@ -8,7 +8,6 @@ if (!isset($_SESSION['UserID'])) {
     exit();
 }
 
-// รวมไฟล์เชื่อมต่อฐานข้อมูล
 include('connect.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
@@ -57,6 +56,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     $stmt->close();
+
+    // เชื่อมต่อกับฐานข้อมูลอีกครั้งเพื่อดึงเงื่อนไขการลา
+    include('connect.php');
+
+    // ดึงเงื่อนไขการลาตามประเภทการลา
+    $stmt_cond = $conn->prepare("SELECT ConditionDescription FROM leaveconditions WHERE LeaveTypeID = ?");
+    $stmt_cond->bind_param("i", $leaveTypeID);
+    $stmt_cond->execute();
+    $result_cond = $stmt_cond->get_result();
+    $conditions = [];
+    if ($result_cond) {
+        while ($row = $result_cond->fetch_assoc()) {
+            $conditions[] = $row['ConditionDescription'];
+        }
+    }
+    $stmt_cond->close();
+
+    // ตัวอย่างการตรวจสอบเงื่อนไขการลา (ปรับให้เหมาะสม)
+    foreach ($conditions as $condition) {
+        // ตรวจสอบการไม่เกินจำนวนวันลา
+        if (strpos($condition, 'ไม่เกิน') !== false) {
+            preg_match('/ไม่เกิน (\d+) วัน/', $condition, $matches);
+            if (isset($matches[1])) {
+                $max_days = intval($matches[1]);
+                $start = new DateTime($startDate);
+                $end = new DateTime($endDate);
+                $interval = $start->diff($end);
+                $days = $interval->days + 1; // รวมวันเริ่มต้น
+                if ($days > $max_days) {
+                    header("Location: inputform.php?error=จำนวนวันลามากกว่าที่กำหนดสำหรับประเภทการลานี้");
+                    exit();
+                }
+            }
+        }
+
+        // คุณสามารถเพิ่มการตรวจสอบเงื่อนไขอื่นๆ ตามที่ต้องการได้ที่นี่
+    }
 
     // แทรกข้อมูลการลา
     $sql = "INSERT INTO leaveapplications (EmployeeID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks) VALUES (?, ?, ?, ?, 'Pending', ?)";

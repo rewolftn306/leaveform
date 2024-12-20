@@ -17,5 +17,8 @@ if ($conn->connect_error) {
 }
 
 // ตั้งค่า charset ให้รองรับ utf8mb4
-$conn->set_charset("utf8mb4");
+if (!$conn->set_charset("utf8mb4")) {
+    printf("Error loading character set utf8mb4: %s\n", $conn->error);
+    exit();
+}
 ?>

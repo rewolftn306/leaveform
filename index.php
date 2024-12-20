@@ -197,6 +197,9 @@ $jsonChartData = json_encode(array_values($chartData));
                 <?php if ($role === 'Director' || $role === 'Admin'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
                 <?php endif; ?>
+                <?php if ($role === 'Admin'): ?>
+                    <a href="create_user.php" class="btn btn-warning">สร้างบัญชีผู้ใช้งาน</a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -288,6 +291,13 @@ $jsonChartData = json_encode(array_values($chartData));
             });
         </script>
     <?php endif; ?>
-    
+    <!-- index.php -->
+<!-- ... ส่วนของปุ่มใน index.php ที่ส่งมาครั้งแรก ... -->
+
+<?php if ($role === 'Admin'): ?>
+    <a href="manage_users.php" class="btn btn-warning">จัดการผู้ใช้งานทั้งหมด</a>
+    <a href="manage_approvers.php" class="btn btn-info">จัดการผู้อนุมัติ</a>
+<?php endif; ?>
+
 </body>
 </html>

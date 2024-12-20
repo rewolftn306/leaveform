@@ -8,24 +8,100 @@ if (!isset($_SESSION['Username'])) {
     exit;
 }
 
+// ตรวจสอบบทบาทของผู้ใช้
+$allowed_roles = ['Director', 'Admin'];
+if (!in_array($_SESSION['Role'], $allowed_roles)) {
+    die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+}
+
 include('connect.php');
 
-// สร้าง CSRF Token
+// สร้าง CSRF Token หากยังไม่มี
 if (empty($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-$search_query = '';
-$params = [];
-$types = '';
+// ตรวจสอบการอนุมัติหรือปฏิเสธคำขอ
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // ตรวจสอบ CSRF Token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid CSRF token");
+    }
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['search_term'])) {
-    $search_term = '%' . $_POST['search_term'] . '%';
-    $search_query = "WHERE e.Name LIKE ?";
-    $params[] = $search_term;
-    $types .= 's';
+    $leave_id = intval($_POST['leave_id']);
+
+    if (isset($_POST['approve_leave'])) {
+        $status = 'Approved';
+    } elseif (isset($_POST['reject_leave'])) {
+        $status = 'Rejected';
+    } else {
+        // ไม่ทำอะไรถ้าไม่ใช่การอนุมัติหรือปฏิเสธ
+        exit;
+    }
+
+    $update_sql = "UPDATE leaveapplications SET ApprovalStatus = ? WHERE ApplicationID = ?";
+    $update_stmt = $conn->prepare($update_sql);
+    $update_stmt->bind_param('si', $status, $leave_id);
+
+    if ($update_stmt->execute()) {
+        // ส่งอีเมล์แจ้งเตือนผู้ยื่นคำขอ
+        $stmt_leave = $conn->prepare("SELECT la.*, u.Email, u.FirstName, u.LastName, lt.LeaveName FROM leaveapplications la JOIN users u ON la.EmployeeID = u.UserID JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID WHERE la.ApplicationID = ?");
+        $stmt_leave->bind_param("i", $leave_id);
+        $stmt_leave->execute();
+        $result_leave = $stmt_leave->get_result();
+        if ($result_leave->num_rows > 0) {
+            $leave = $result_leave->fetch_assoc();
+            $email = $leave['Email'];
+            $firstName = $leave['FirstName'];
+            $lastName = $leave['LastName'];
+            $leaveType = $leave['LeaveName'];
+            $startDate = $leave['StartDate'];
+            $endDate = $leave['EndDate'];
+            $remarks = $leave['Remarks'];
+            $subject = "การอนุมัติการลาของคุณถูก $status";
+            $message = "สวัสดีคุณ $firstName $lastName,\n\nคำขอลาการลาของคุณได้ถูก $status.\n\nรายละเอียด:\nประเภทการลา: $leaveType\nวันที่เริ่ม: $startDate\nวันที่สิ้นสุด: $endDate\nหมายเหตุ: $remarks\n\nขอบคุณ.";
+            $headers = "From: no-reply@yourdomain.com";
+
+            // ส่งอีเมล์
+            mail($email, $subject, $message, $headers);
+        }
+        $stmt_leave->close();
+
+        header("Location: approve_leave.php?success=1");
+        exit;
+    } else {
+        echo "การอัปเดตสถานะการลาไม่สำเร็จ: " . htmlspecialchars($update_stmt->error);
+    }
+
+    $update_stmt->close();
 }
 
+// ดึงคำขอลาการลาที่รอดำเนินการและตามการค้นหา
+$search_term = '';
+$status_filter = '';
+$params = [];
+$types = '';
+$where_clauses = [];
+
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // การค้นหาด้วยคำค้นหาตามชื่อ
+    if (isset($_POST['search_term']) && !empty(trim($_POST['search_term']))) {
+        $search_term = '%' . trim($_POST['search_term']) . '%';
+        $where_clauses[] = "e.Name LIKE ?";
+        $params[] = $search_term;
+        $types .= 's';
+    }
+
+    // การกรองตามสถานะการอนุมัติ
+    if (isset($_POST['approval_status']) && $_POST['approval_status'] !== '') {
+        $status_filter = $_POST['approval_status'];
+        $where_clauses[] = "la.ApprovalStatus = ?";
+        $params[] = $status_filter;
+        $types .= 's';
+    }
+}
+
+// สร้างคำสั่ง SQL พร้อมการค้นหาและกรอง
 $sql = "SELECT 
             la.ApplicationID, 
             la.EmployeeID, 
@@ -38,47 +114,32 @@ $sql = "SELECT
             lt.LeaveName
         FROM leaveapplications la
         JOIN employees e ON la.EmployeeID = e.EmployeeID
-        JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-        $search_query
-        ORDER BY la.ApplicationID DESC";
+        JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID";
 
+if (!empty($where_clauses)) {
+    $sql .= " WHERE " . implode(" AND ", $where_clauses);
+}
+
+$sql .= " ORDER BY la.ApplicationID DESC";
+
+// เตรียมคำสั่ง SQL
 $stmt = $conn->prepare($sql);
-if ($search_query) {
-    $stmt->bind_param($types, ...$params);
-}
-
-$stmt->execute();
-$result = $stmt->get_result();
-
-$leaves = [];
-if ($result) {
-    while ($row = $result->fetch_assoc()) {
-        $leaves[] = $row;
+if ($stmt) {
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
     }
-}
-
-// ตรวจสอบการอนุมัติคำขอ
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['approve_leave'])) {
-    // ตรวจสอบ CSRF Token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die("Invalid CSRF token");
+    $stmt->execute();
+    $result = $stmt->get_result();
+    $leaves = [];
+    if ($result) {
+        while ($row = $result->fetch_assoc()) {
+            $leaves[] = $row;
+        }
     }
-
-    $leave_id = intval($_POST['leave_id']);
-    $status = 'Approved';
-
-    $update_sql = "UPDATE leaveapplications SET ApprovalStatus = ? WHERE ApplicationID = ?";
-    $update_stmt = $conn->prepare($update_sql);
-    $update_stmt->bind_param('si', $status, $leave_id);
-
-    if ($update_stmt->execute()) {
-        header("Location: approve_leave.php?success=1");
-        exit;
-    } else {
-        echo "การอนุมัติลาล้มเหลว: " . htmlspecialchars($update_stmt->error);
-    }
-
-    $update_stmt->close();
+    $stmt->close();
+} else {
+    error_log("Prepare failed: " . $conn->error);
+    $leaves = [];
 }
 
 $conn->close();
@@ -127,18 +188,33 @@ $conn->close();
     <!-- Main Container -->
     <div class="container">
 
-        <!-- Search Form -->
+        <!-- Search and Filter Form -->
         <form method="POST" class="mt-4">
-            <div class="input-group mb-3">
-                <input type="text" name="search_term" class="form-control" placeholder="ค้นหาข้อมูล..." value="<?= isset($_POST['search_term']) ? htmlspecialchars($_POST['search_term']) : ''; ?>">
-                <button class="btn btn-primary" type="submit">ค้นหา</button>
+            <div class="row mb-3">
+                <div class="col-md-6">
+                    <div class="input-group">
+                        <input type="text" name="search_term" class="form-control" placeholder="ค้นหาชื่อพนักงาน..." value="<?= isset($_POST['search_term']) ? htmlspecialchars($_POST['search_term']) : ''; ?>">
+                        <button class="btn btn-primary" type="submit">ค้นหา</button>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <select name="approval_status" class="form-select">
+                        <option value="">-- เลือกสถานะการอนุมัติ --</option>
+                        <option value="Pending" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                        <option value="Approved" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Approved') ? 'selected' : ''; ?>>อนุมัติแล้ว</option>
+                        <option value="Rejected" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Rejected') ? 'selected' : ''; ?>>ถูกปฏิเสธ</option>
+                    </select>
+                </div>
+                <div class="col-md-2">
+                    <button class="btn btn-secondary w-100" type="submit">กรอง</button>
+                </div>
             </div>
         </form>
 
         <!-- Success Message -->
         <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
-                อนุมัติการลาสำเร็จ!
+                อนุมัติหรือปฏิเสธการลาสำเร็จ!
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
@@ -195,6 +271,11 @@ $conn->close();
                                             <input type="hidden" name="leave_id" value="<?= intval($leave['ApplicationID']); ?>">
                                             <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                                             <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm('คุณต้องการอนุมัติการลานี้หรือไม่?');">อนุมัติ</button>
+                                        </form>
+                                        <form method="POST" class="d-inline">
+                                            <input type="hidden" name="leave_id" value="<?= intval($leave['ApplicationID']); ?>">
+                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                                            <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm('คุณต้องการปฏิเสธการลานี้หรือไม่?');">ปฏิเสธ</button>
                                         </form>
                                     <?php else: ?>
                                         <button class="btn btn-sm btn-secondary" disabled>ไม่สามารถดำเนินการ</button>
