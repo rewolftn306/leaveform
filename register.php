@@ -88,7 +88,7 @@ if (empty($_SESSION['csrf_token'])) {
             
             <!-- สำหรับการดีบักเท่านั้น -->
             <hr>
-            <p>CSRF Token (สำหรับดีบัก): <?= htmlspecialchars($_SESSION['csrf_token']); ?></p>
+
         </div>
     </div>
     
