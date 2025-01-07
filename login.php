@@ -12,6 +12,21 @@
             align-items: center;
             justify-content: center;
             height: 100vh;
+            flex-direction: column;
+        }
+        header {
+            width: 100%;
+            background-color: rgba(0, 0, 0, 0.8);
+            padding: 10px 0;
+            position: fixed;
+            top: 0;
+            left: 0;
+            text-align: center;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            z-index: 1000;
+        }
+        header img {
+            height: 100px;
         }
         .login-container {
             background-color: rgba(0, 0, 0, 0.8);
@@ -20,6 +35,7 @@
             width: 350px;
             color: white;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            margin-top: 80px;
         }
         .login-container h1 {
             margin-bottom: 20px;
@@ -50,16 +66,15 @@
         .developer-btn:hover {
             background-color: #e64a19;
         }
-        .header img {
-            width: 100%;
-            height: auto;
-            margin-bottom: 20px;
-        }
     </style>
 </head>
 <body>
-    <div class="login-container">
+    <!-- Head bar -->
+    <header>
         <img src="ITMSU.png" alt="Logo">
+    </header>
+
+    <div class="login-container">
         <h1>เข้าสู่ระบบ</h1>
         <form action="process_login.php" method="POST" novalidate>
             <div class="mb-3">
