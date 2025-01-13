@@ -16,17 +16,8 @@ if (!in_array($_SESSION['Role'], $allowed_roles)) {
 
 include('connect.php');
 
-// สร้าง CSRF Token หากยังไม่มี
-if (empty($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
-
 // ตรวจสอบการอนุมัติหรือปฏิเสธคำขอ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // ตรวจสอบ CSRF Token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die("Invalid CSRF token");
-    }
 
     $leave_id = intval($_POST['leave_id']);
 

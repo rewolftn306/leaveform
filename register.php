@@ -86,9 +86,6 @@ if (empty($_SESSION['csrf_token'])) {
             </form>
             <p class="mt-3 text-center">มีบัญชีแล้ว? <a href="login.php">เข้าสู่ระบบ</a></p>
             
-            <!-- สำหรับการดีบักเท่านั้น -->
-            <hr>
-
         </div>
     </div>
     
