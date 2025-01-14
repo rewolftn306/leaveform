@@ -1,7 +1,6 @@
 <?php
 // process_login.php
 session_start();
-
 include('connect.php');
 
 // ตรวจสอบว่ามีการส่งฟอร์มผ่าน POST หรือไม่
@@ -13,7 +12,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ตรวจสอบว่ากรอกข้อมูลครบถ้วนหรือไม่
     if (empty($username) || empty($password)) {
         header("Location: login.php?error=กรุณากรอกชื่อผู้ใช้และรหัสผ่าน");
-        exit();
+        exit;
     }
 
     // เตรียมคำสั่ง SQL เพื่อค้นหาผู้ใช้
@@ -39,21 +38,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // รีไดเรกต์ไปยังหน้าแรก
                 header("Location: index.php?success=เข้าสู่ระบบสำเร็จ");
-                exit();
+                exit;
             } else {
                 header("Location: login.php?error=รหัสผ่านไม่ถูกต้อง");
-                exit();
+                exit;
             }
         } else {
             header("Location: login.php?error=ไม่พบผู้ใช้ที่มีชื่อผู้ใช้นี้");
-            exit();
+            exit;
         }
 
         $stmt->close();
     } else {
         // กรณีเกิดข้อผิดพลาดในการเตรียมคำสั่ง SQL
         header("Location: login.php?error=เกิดข้อผิดพลาดในการประมวลผล");
-        exit();
+        exit;
     }
 }
 

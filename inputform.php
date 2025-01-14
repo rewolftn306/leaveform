@@ -5,7 +5,7 @@ session_start();
 // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
 if (!isset($_SESSION['UserID'])) {
     header("Location: login.php?error=กรุณาเข้าสู่ระบบก่อน");
-    exit();
+    exit;
 }
 
 // ตรวจสอบว่า FirstName และ LastName ถูกตั้งค่าไว้หรือไม่
@@ -139,6 +139,14 @@ if (isset($_GET['success'])) {
             fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
                 .then(response => response.json())
                 .then(data => {
+                    if (data.error) {
+                        document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                        return;
+                    }
+                    if (data.length === 0) {
+                        document.getElementById('leave_conditions').innerHTML = "<p>ไม่มีเงื่อนไขการลาในประเภทนี้</p>";
+                        return;
+                    }
                     let html = "<h5>เงื่อนไขการลา:</h5><ul>";
                     data.forEach(condition => {
                         html += `<li>${condition}</li>`;
@@ -146,7 +154,10 @@ if (isset($_GET['success'])) {
                     html += "</ul>";
                     document.getElementById('leave_conditions').innerHTML = html;
                 })
-                .catch(error => console.error('Error:', error));
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูลเงื่อนไขการลา</div>`;
+                });
         }
     </script>
 </body>

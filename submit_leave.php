@@ -8,6 +8,11 @@ if (!isset($_SESSION['UserID'])) {
     exit();
 }
 
+// ตรวจสอบว่าผู้ใช้มีบทบาทเป็น Employee หรือไม่
+if ($_SESSION['Role'] !== 'Employee') {
+    die("คุณไม่มีสิทธิ์ส่งคำขอการลา");
+}
+
 include('connect.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
@@ -29,6 +34,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // รับ EmployeeID จาก Session
     $employeeID = intval($_SESSION['UserID']);
+
+    // ตรวจสอบว่า EmployeeID มีอยู่ในตาราง employees หรือไม่
+    $stmt_check = $conn->prepare("SELECT EmployeeID FROM employees WHERE EmployeeID = ?");
+    $stmt_check->bind_param("i", $employeeID);
+    $stmt_check->execute();
+    $stmt_check->store_result();
+    if ($stmt_check->num_rows === 0) {
+        $stmt_check->close();
+        header("Location: inputform.php?error=ไม่มีข้อมูลพนักงานที่เกี่ยวข้องกับบัญชีนี้");
+        exit();
+    }
+    $stmt_check->close();
 
     // ตรวจสอบวันที่
     if (empty($startDate) || empty($endDate)) {
@@ -56,9 +73,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
     $stmt->close();
-
-    // เชื่อมต่อกับฐานข้อมูลอีกครั้งเพื่อดึงเงื่อนไขการลา
-    include('connect.php');
 
     // ดึงเงื่อนไขการลาตามประเภทการลา
     $stmt_cond = $conn->prepare("SELECT ConditionDescription FROM leaveconditions WHERE LeaveTypeID = ?");

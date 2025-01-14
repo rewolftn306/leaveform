@@ -34,6 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
     $lastname = trim($_POST['lastname']);
     $email = trim($_POST['email']);
     $role = trim($_POST['role']);
+    $position = isset($_POST['position']) ? trim($_POST['position']) : 'Unknown';
+    $department = isset($_POST['department']) ? trim($_POST['department']) : 'Unknown';
+    $tel = isset($_POST['tel']) ? trim($_POST['tel']) : 'Unknown';
 
     // ตรวจสอบข้อมูลที่จำเป็น
     if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($role)) {
@@ -54,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                 $stmt->close();
 
                 // จำกัดบทบาทที่ Admin สามารถสร้างได้
-                $allowed_roles = ['Director', 'Admin'];
+                $allowed_roles = ['Director', 'Admin', 'Employee'];
                 if (!in_array($role, $allowed_roles)) {
                     $error = "ไม่สามารถสร้างบัญชีผู้ใช้งานด้วยบทบาทนี้ได้";
                 } else {
@@ -128,6 +131,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                                     throw new Exception("Execute failed: " . $stmt_approver->error);
                                 }
                                 $stmt_approver->close();
+                            }
+
+                            // หากเป็น Employee ให้แทรกลงในตาราง employees
+                            if ($role === 'Employee') {
+                                $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role) 
+                                                  VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)";
+                                $stmt_employees = $conn->prepare($sql_employees);
+                                if (!$stmt_employees) {
+                                    throw new Exception("Prepare failed: " . $conn->error);
+                                }
+
+                                $full_name = $firstname . ' ' . $lastname;
+                                $role_employee = 'Employee';
+
+                                $stmt_employees->bind_param("issssss", $last_inserted_id, $position, $department, $email, $tel, $full_name, $profile_picture, $role_employee);
+
+                                if (!$stmt_employees->execute()) {
+                                    throw new Exception("Execute failed: " . $stmt_employees->error);
+                                }
+
+                                $stmt_employees->close();
                             }
 
                             // Commit Transaction
@@ -227,26 +251,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                     <input type="email" id="email" name="email" class="form-control">
                 </div>
                 <div class="mb-3">
-                    <label for="role" class="form-label">ตำแหน่ง</label>
-                    <select id="role" name="role" class="form-select" required>
-                        <option value="">-- เลือกตำแหน่ง --</option>
+                    <label for="role" class="form-label">บทบาท</label>
+                    <select id="role" name="role" class="form-select" required onchange="toggleEmployeeFields(this.value)">
+                        <option value="">-- เลือกบทบาท --</option>
                         <option value="Director">อธิบดี (Director)</option>
                         <option value="Admin">ผู้ดูแลระบบ (Admin)</option>
+                        <option value="Employee">พนักงาน (Employee)</option>
                     </select>
                 </div>
+                <!-- ฟิลด์เพิ่มเติมสำหรับ Employee -->
+                <div id="employee_fields" style="display: none;">
+                    <div class="mb-3">
+                        <label for="position" class="form-label">ตำแหน่ง</label>
+                        <input type="text" id="position" name="position" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="department" class="form-label">แผนก</label>
+                        <input type="text" id="department" name="department" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tel" class="form-label">โทรศัพท์</label>
+                        <input type="text" id="tel" name="tel" class="form-control">
+                    </div>
+                </div>
                 <div class="mb-3">
-                    <label for="profile_picture" class="form-label">โปรไฟล์:</label>
+                    <label for="profile_picture" class="form-label">โปรไฟล์รูปภาพ</label>
                     <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*" required>
                 </div>
-                <!-- CSRF Token -->
-                <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
+                <!-- ใส่ CSRF Token -->
+                <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <button type="submit" name="create_user" class="btn btn-primary w-100">สร้างบัญชีผู้ใช้งาน</button>
             </form>
             <a href="manage_approvers.php" class="btn-back">จัดการผู้อนุมัติ</a>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
+    <!-- Bootstrap JS และ JavaScript สำหรับแสดงฟิลด์เพิ่มเติม -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function toggleEmployeeFields(role) {
+            const employeeFields = document.getElementById('employee_fields');
+            if (role === 'Employee') {
+                employeeFields.style.display = 'block';
+            } else {
+                employeeFields.style.display = 'none';
+                // ล้างค่าฟิลด์เมื่อไม่เลือกเป็น Employee
+                document.getElementById('position').value = '';
+                document.getElementById('department').value = '';
+                document.getElementById('tel').value = '';
+            }
+        }
+    </script>
 </body>
 </html>

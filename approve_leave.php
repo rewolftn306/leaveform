@@ -16,10 +16,32 @@ if (!in_array($_SESSION['Role'], $allowed_roles)) {
 
 include('connect.php');
 
+// สร้าง CSRF Token หากยังไม่มี
+if (empty($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
 // ตรวจสอบการอนุมัติหรือปฏิเสธคำขอ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    // ตรวจสอบ CSRF Token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid CSRF token");
+    }
 
     $leave_id = intval($_POST['leave_id']);
+
+    // ตรวจสอบว่าคำขอนี้ยังคงอยู่ในสถานะ Pending
+    $stmt_check = $conn->prepare("SELECT ApprovalStatus FROM leaveapplications WHERE ApplicationID = ?");
+    $stmt_check->bind_param('i', $leave_id);
+    $stmt_check->execute();
+    $stmt_check->bind_result($current_status);
+    $stmt_check->fetch();
+    $stmt_check->close();
+
+    if ($current_status !== 'Pending') {
+        header("Location: approve_leave.php?error=คำขอนี้ได้ถูกดำเนินการแล้ว");
+        exit;
+    }
 
     if (isset($_POST['approve_leave'])) {
         $status = 'Approved';
@@ -51,10 +73,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $remarks = $leave['Remarks'];
             $subject = "การอนุมัติการลาของคุณถูก $status";
             $message = "สวัสดีคุณ $firstName $lastName,\n\nคำขอลาการลาของคุณได้ถูก $status.\n\nรายละเอียด:\nประเภทการลา: $leaveType\nวันที่เริ่ม: $startDate\nวันที่สิ้นสุด: $endDate\nหมายเหตุ: $remarks\n\nขอบคุณ.";
-            $headers = "From: no-reply@yourdomain.com";
+            $headers = "From: no-reply@yourdomain.com\r\n" .
+                       "Reply-To: no-reply@yourdomain.com\r\n" .
+                       "X-Mailer: PHP/" . phpversion();
 
-            // ส่งอีเมล์
-            mail($email, $subject, $message, $headers);
+            // ส่งอีเมล์อย่างปลอดภัย
+            if (!mail($email, $subject, $message, $headers)) {
+                error_log("Failed to send email to $email for leave application ID $leave_id");
+            }
         }
         $stmt_leave->close();
 
@@ -74,18 +100,19 @@ $params = [];
 $types = '';
 $where_clauses = [];
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+// ใช้ GET สำหรับการค้นหาและกรอง
+if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // การค้นหาด้วยคำค้นหาตามชื่อ
-    if (isset($_POST['search_term']) && !empty(trim($_POST['search_term']))) {
-        $search_term = '%' . trim($_POST['search_term']) . '%';
+    if (isset($_GET['search_term']) && !empty(trim($_GET['search_term']))) {
+        $search_term = '%' . trim($_GET['search_term']) . '%';
         $where_clauses[] = "e.Name LIKE ?";
         $params[] = $search_term;
         $types .= 's';
     }
 
     // การกรองตามสถานะการอนุมัติ
-    if (isset($_POST['approval_status']) && $_POST['approval_status'] !== '') {
-        $status_filter = $_POST['approval_status'];
+    if (isset($_GET['approval_status']) && $_GET['approval_status'] !== '') {
+        $status_filter = $_GET['approval_status'];
         $where_clauses[] = "la.ApprovalStatus = ?";
         $params[] = $status_filter;
         $types .= 's';
@@ -180,32 +207,38 @@ $conn->close();
     <div class="container">
 
         <!-- Search and Filter Form -->
-        <form method="POST" class="mt-4">
+        <form method="GET" class="mt-4">
             <div class="row mb-3">
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <div class="input-group">
-                        <input type="text" name="search_term" class="form-control" placeholder="ค้นหาชื่อพนักงาน..." value="<?= isset($_POST['search_term']) ? htmlspecialchars($_POST['search_term']) : ''; ?>">
+                        <input type="text" name="search_term" class="form-control" placeholder="ค้นหาชื่อพนักงาน..." value="<?= isset($_GET['search_term']) ? htmlspecialchars($_GET['search_term']) : ''; ?>">
                         <button class="btn btn-primary" type="submit">ค้นหา</button>
                     </div>
                 </div>
-                <div class="col-md-4">
+                <div class="col-md-3">
                     <select name="approval_status" class="form-select">
                         <option value="">-- เลือกสถานะการอนุมัติ --</option>
-                        <option value="Pending" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
-                        <option value="Approved" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Approved') ? 'selected' : ''; ?>>อนุมัติแล้ว</option>
-                        <option value="Rejected" <?= (isset($_POST['approval_status']) && $_POST['approval_status'] === 'Rejected') ? 'selected' : ''; ?>>ถูกปฏิเสธ</option>
+                        <option value="Pending" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
+                        <option value="Approved" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Approved') ? 'selected' : ''; ?>>อนุมัติแล้ว</option>
+                        <option value="Rejected" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Rejected') ? 'selected' : ''; ?>>ถูกปฏิเสธ</option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <button class="btn btn-secondary w-100" type="submit">กรอง</button>
+                    <a href="approve_leave.php" class="btn btn-secondary w-100">รีเซ็ต</a>
                 </div>
             </div>
         </form>
 
-        <!-- Success Message -->
+        <!-- Success or Error Message -->
         <?php if (isset($_GET['success']) && $_GET['success'] == 1): ?>
             <div class="alert alert-success alert-dismissible fade show" role="alert">
                 อนุมัติหรือปฏิเสธการลาสำเร็จ!
+                <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+        <?php endif; ?>
+        <?php if (isset($_GET['error'])): ?>
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+                <?= htmlspecialchars($_GET['error']); ?>
                 <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
             </div>
         <?php endif; ?>
@@ -278,6 +311,13 @@ $conn->close();
                 </tbody>
             </table>
         </div>
+
+        <!-- Pagination (ตัวอย่างการเพิ่มหน้า) -->
+        <?php
+            // เพิ่มการแบ่งหน้า (Pagination) ที่นี่ หากข้อมูลมีจำนวนมาก
+            // ตัวอย่างเช่น การแบ่งหน้าเป็น 10 รายการต่อหน้า
+            // คุณสามารถใช้ library เช่น [Pagination](https://getbootstrap.com/docs/5.3/components/pagination/)
+        ?>
 
         <!-- Footer -->
         <div class="d-flex justify-content-between align-items-center mt-3">

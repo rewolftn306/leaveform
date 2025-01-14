@@ -7,6 +7,11 @@ $username = getenv('DB_USERNAME') ?: '64011211132';
 $password = getenv('DB_PASSWORD') ?: '64011211132';
 $dbname = getenv('DB_NAME') ?: 'db64011211132';
 
+if (!$servername || !$username || !$password || !$dbname) {
+    error_log("Database credentials are not set in environment variables.");
+    die("ขออภัย ระบบมีปัญหา กรุณาลองใหม่อีกครั้งในภายหลัง");
+}
+
 // สร้างการเชื่อมต่อใหม่ด้วย mysqli
 $conn = new mysqli($servername, $username, $password, $dbname);
 
@@ -18,7 +23,7 @@ if ($conn->connect_error) {
 
 // ตั้งค่า charset ให้รองรับ utf8mb4
 if (!$conn->set_charset("utf8mb4")) {
-    printf("Error loading character set utf8mb4: %s\n", $conn->error);
-    exit();
+    error_log("Error loading character set utf8mb4: " . $conn->error);
+    die("ขออภัย ระบบมีปัญหา กรุณาลองใหม่อีกครั้งในภายหลัง");
 }
 ?>

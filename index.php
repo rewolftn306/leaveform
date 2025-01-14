@@ -68,22 +68,22 @@ if ($result) {
 $tableData = [];
 $sql = "
     SELECT 
-        e.Name AS name,
+        u.FirstName, u.LastName,
         SUM(CASE WHEN lt.LeaveName = 'ลาป่วย' THEN 1 ELSE 0 END) AS sick_leave,
         SUM(CASE WHEN lt.LeaveName = 'ลากิจส่วนตัว' THEN 1 ELSE 0 END) AS personal_leave,
         SUM(CASE WHEN lt.LeaveName = 'ลาพักผ่อน' THEN 1 ELSE 0 END) AS vacation_leave,
         COUNT(la.ApplicationID) AS total_leave
-    FROM employees e
-    LEFT JOIN leaveapplications la ON e.EmployeeID = la.EmployeeID
+    FROM users u
+    LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
     LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-    GROUP BY e.Name
+    GROUP BY u.UserID
 ";
 
 $result = $conn->query($sql);
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $tableData[] = [
-            'name' => htmlspecialchars($row['name']),
+            'name' => htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']),
             'sick_leave' => (int)$row['sick_leave'],
             'personal_leave' => (int)$row['personal_leave'],
             'vacation_leave' => (int)$row['vacation_leave'],
@@ -200,6 +200,10 @@ $jsonChartData = json_encode(array_values($chartData));
                 <?php if ($role === 'Admin'): ?>
                     <a href="create_user.php" class="btn btn-warning">สร้างบัญชีผู้ใช้งาน</a>
                 <?php endif; ?>
+                <?php if ($role === 'Admin'): ?>
+                    <a href="manage_users.php" class="btn btn-info">จัดการผู้ใช้งานทั้งหมด</a>
+                    <a href="manage_approvers.php" class="btn btn-secondary">จัดการผู้อนุมัติ</a>
+                <?php endif; ?>
             </div>
         </div>
 
@@ -291,13 +295,5 @@ $jsonChartData = json_encode(array_values($chartData));
             });
         </script>
     <?php endif; ?>
-    <!-- index.php -->
-<!-- ... ส่วนของปุ่มใน index.php ที่ส่งมาครั้งแรก ... -->
-
-<?php if ($role === 'Admin'): ?>
-    <a href="manage_users.php" class="btn btn-warning">จัดการผู้ใช้งานทั้งหมด</a>
-    <a href="manage_approvers.php" class="btn btn-info">จัดการผู้อนุมัติ</a>
-<?php endif; ?>
-
 </body>
 </html>

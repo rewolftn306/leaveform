@@ -17,7 +17,7 @@ include('connect.php');
 
 // ตรวจสอบว่ามีการส่ง parameter `userid` มาหรือไม่
 if (!isset($_GET['userid'])) {
-    header("Location: manage_approvers.php?error=ไม่พบผู้ใช้งาน");
+    header("Location: manage_users.php?error=ไม่พบผู้ใช้งาน");
     exit;
 }
 
@@ -30,7 +30,7 @@ $stmt->execute();
 $result = $stmt->get_result();
 
 if ($result->num_rows === 0) {
-    header("Location: manage_approvers.php?error=ไม่พบผู้ใช้งาน");
+    header("Location: manage_users.php?error=ไม่พบผู้ใช้งาน");
     exit;
 }
 
@@ -112,13 +112,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
 
                 if ($stmt_update->execute()) {
                     // อัปเดตตาราง approvers ถ้าบทบาทเปลี่ยนแปลง
-                    $approverID_map = [
-                        'Director' => 1,
-                        'Admin' => 2
-                    ];
+                    // ดึง ApproverID จากฐานข้อมูลตามบทบาทที่เลือก
+                    $stmt_approver = $conn->prepare("SELECT ApproverID FROM approvers WHERE ApproverLevel = ?");
+                    if (!$stmt_approver) {
+                        throw new Exception("Prepare failed: " . $conn->error);
+                    }
 
-                    if (array_key_exists($role, $approverID_map)) {
-                        $approverID = $approverID_map[$role];
+                    // กำหนด ApproverLevel ตามบทบาท
+                    $approver_level = ($role === 'Director') ? 1 : 2;
+                    $stmt_approver->bind_param("i", $approver_level);
+                    $stmt_approver->execute();
+                    $stmt_approver->bind_result($approverID);
+                    $stmt_approver->fetch();
+                    $stmt_approver->close();
+
+                    if ($approverID) {
                         // ตรวจสอบว่ามีการอัปเดต approverID หรือไม่
                         $stmt_check = $conn->prepare("SELECT * FROM approvers WHERE UserID = ?");
                         $stmt_check->bind_param("i", $userID);
@@ -128,16 +136,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                             // อัปเดต approverID
                             $stmt_update_approver = $conn->prepare("UPDATE approvers SET ApproverID = ? WHERE UserID = ?");
                             $stmt_update_approver->bind_param("ii", $approverID, $userID);
-                            $stmt_update_approver->execute();
+                            if (!$stmt_update_approver->execute()) {
+                                throw new Exception("Update approver failed: " . $stmt_update_approver->error);
+                            }
                             $stmt_update_approver->close();
                         } else {
                             // แทรกใหม่ถ้ายังไม่มี
                             $stmt_insert_approver = $conn->prepare("INSERT INTO approvers (UserID, ApproverID) VALUES (?, ?)");
                             $stmt_insert_approver->bind_param("ii", $userID, $approverID);
-                            $stmt_insert_approver->execute();
+                            if (!$stmt_insert_approver->execute()) {
+                                throw new Exception("Insert approver failed: " . $stmt_insert_approver->error);
+                            }
                             $stmt_insert_approver->close();
                         }
                         $stmt_check->close();
+                    } else {
+                        throw new Exception("ApproverID ไม่พบสำหรับบทบาทนี้");
                     }
 
                     $stmt_update->close();
@@ -152,9 +166,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
             }
         }
     }
-}
 
-$conn->close();
+    $conn->close();
+}
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -186,6 +200,9 @@ $conn->close();
         }
         .btn-back:hover {
             background-color: #c82333;
+        }
+        .current-profile {
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -247,7 +264,9 @@ $conn->close();
                     <label for="profile_picture" class="form-label">โปรไฟล์:</label>
                     <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
                     <?php if (!empty($user['profile_picture'])): ?>
-                        <img src="<?= htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture" class="img-thumbnail mt-2" width="150">
+                        <div class="current-profile">
+                            <img src="<?= htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture" class="img-thumbnail mt-2" width="150">
+                        </div>
                     <?php endif; ?>
                 </div>
                 <!-- CSRF Token -->

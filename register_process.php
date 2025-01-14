@@ -2,10 +2,6 @@
 // register_process.php
 session_start();
 
-// สำหรับการดีบักเท่านั้น
-// echo "Session CSRF Token: " . htmlspecialchars($_SESSION['csrf_token']) . "<br>";
-// echo "Form CSRF Token: " . htmlspecialchars($_POST['csrf_token']) . "<br>";
-
 // ตรวจสอบว่า CSRF token ถูกส่งมาหรือไม่
 if (!isset($_POST['csrf_token'])) {
     die("Invalid CSRF token: Token not set");
@@ -16,7 +12,6 @@ if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
     die("Invalid CSRF token: Token mismatch");
 }
 
-// รวมไฟล์เชื่อมต่อฐานข้อมูล
 include('connect.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
@@ -31,6 +26,11 @@ $firstname = sanitize_input($_POST['firstname']);
 $lastname = sanitize_input($_POST['lastname']);
 $email = isset($_POST['email']) ? (filter_var($_POST['email'], FILTER_VALIDATE_EMAIL) ? sanitize_input($_POST['email']) : NULL) : NULL;
 $role = sanitize_input($_POST['role']);
+
+// รับข้อมูลเพิ่มเติมสำหรับ Employee (ถ้ามี)
+$position = isset($_POST['position']) ? sanitize_input($_POST['position']) : 'Unknown';
+$department = isset($_POST['department']) ? sanitize_input($_POST['department']) : 'Unknown';
+$tel = isset($_POST['tel']) ? sanitize_input($_POST['tel']) : 'Unknown';
 
 // ตรวจสอบข้อมูลที่จำเป็น
 if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($role)) {
@@ -125,20 +125,17 @@ try {
 
     // ถ้า Role เป็น Employee ให้แทรกข้อมูลลงในตาราง employees
     if ($role === "Employee") {
-        $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role)
+        $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role) 
                           VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)";
         $stmt_employees = $conn->prepare($sql_employees);
         if (!$stmt_employees) {
             throw new Exception("Prepare failed: " . $conn->error);
         }
 
-        // รับค่าจากฟอร์มเพิ่มเติม (ถ้ามี)
-        $position = isset($_POST['position']) ? sanitize_input($_POST['position']) : NULL;
-        $department = isset($_POST['department']) ? sanitize_input($_POST['department']) : NULL;
-        $tel = isset($_POST['tel']) ? sanitize_input($_POST['tel']) : NULL;
         $full_name = $firstname . ' ' . $lastname;
+        $role_employee = 'Employee';
 
-        $stmt_employees->bind_param("isssssss", $last_inserted_id, $position, $department, $email, $tel, $full_name, $profile_picture, $role);
+        $stmt_employees->bind_param("isssssss", $last_inserted_id, $position, $department, $email, $tel, $full_name, $profile_picture, $role_employee);
 
         if (!$stmt_employees->execute()) {
             throw new Exception("Execute failed: " . $stmt_employees->error);
