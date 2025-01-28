@@ -119,7 +119,7 @@ $jsonChartData = json_encode(array_values($chartData));
             flex-wrap: wrap;
             align-items: center;
             justify-content: space-between;
-            padding: 15px 0;
+            padding: 25px 0;
             border-bottom: 1px solid #ddd;
         }
         .profile-details h4 {
@@ -129,7 +129,7 @@ $jsonChartData = json_encode(array_values($chartData));
         }
         .profile-details p {
             margin: 5px 0 0 0;
-            font-size: 14px;
+            font-size: 18px;
             color: #666;
         }
         .buttons a {
@@ -137,7 +137,7 @@ $jsonChartData = json_encode(array_values($chartData));
         }
         .chart-container {
             width: 100%;
-            max-width: 600px;
+            max-width: 500px;
             margin: 20px auto;
         }
         #leaveChart {
@@ -198,11 +198,7 @@ $jsonChartData = json_encode(array_values($chartData));
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
                 <?php endif; ?>
                 <?php if ($role === 'Admin'): ?>
-                    <a href="create_user.php" class="btn btn-warning">สร้างบัญชีผู้ใช้งาน</a>
-                <?php endif; ?>
-                <?php if ($role === 'Admin'): ?>
                     <a href="manage_users.php" class="btn btn-info">จัดการผู้ใช้งานทั้งหมด</a>
-                    <a href="manage_approvers.php" class="btn btn-secondary">จัดการผู้อนุมัติ</a>
                 <?php endif; ?>
             </div>
         </div>

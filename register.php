@@ -24,8 +24,8 @@ if (empty($_SESSION['csrf_token'])) {
             margin: auto;
             background: #ffffff;
             padding: 30px;
-            border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            border-radius: 15px;
+            box-shadow: 0 5px 10px rgba(0,0,0,0.1);
         }
     </style>
 </head>
@@ -83,6 +83,7 @@ if (empty($_SESSION['csrf_token'])) {
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                 
                 <button type="submit" class="btn btn-primary w-100">ลงทะเบียน</button>
+                <p><a href="login.php" class="btn btn-danger float-end mt-3 w-20">ย้อนกลับ</a></p>
             </form>
             <p class="mt-3 text-center">มีบัญชีแล้ว? <a href="login.php">เข้าสู่ระบบ</a></p>
             

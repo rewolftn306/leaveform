@@ -212,7 +212,6 @@ $conn->close();
                 <div class="col-md-4">
                     <div class="input-group">
                         <input type="text" name="search_term" class="form-control" placeholder="ค้นหาชื่อพนักงาน..." value="<?= isset($_GET['search_term']) ? htmlspecialchars($_GET['search_term']) : ''; ?>">
-                        <button class="btn btn-primary" type="submit">ค้นหา</button>
                     </div>
                 </div>
                 <div class="col-md-3">
@@ -224,7 +223,8 @@ $conn->close();
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <a href="approve_leave.php" class="btn btn-secondary w-100">รีเซ็ต</a>
+                    <button class="btn btn-primary" type="submit">ค้นหา</button>
+                    <a href="approve_leave.php" class="btn btn-secondary w-20">รีเซ็ต</a>
                 </div>
             </div>
         </form>
@@ -324,11 +324,11 @@ $conn->close();
             <div>แสดงผลจากข้อมูล <?= count($leaves); ?> รายการ</div>
             <button class="btn btn-secondary" disabled>โหลดเพิ่มเติม</button>
         </div>
-
+        <a href="index.php" class="btn btn-danger mt-3 w-20">ย้อนกลับ</a>
     </div>
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
 </body>
 </html>

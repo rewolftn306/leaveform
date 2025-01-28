@@ -107,6 +107,7 @@ $conn->close();
                 </tbody>
             </table>
         </div>
+        <a href="index.php" class="btn btn-danger mt-3 w-20">ย้อนกลับ</a>
     </div>
 
     <!-- Bootstrap JS -->

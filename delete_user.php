@@ -38,7 +38,7 @@ $stmt_fetch->fetch();
 $stmt_fetch->close();
 
 // ตรวจสอบว่าผู้ใช้มีบทบาทที่สามารถลบได้หรือไม่
-$protected_roles = ['Admin', 'Director'];
+$protected_roles = ['Admin'];
 if (in_array($role, $protected_roles)) {
     header("Location: manage_users.php?error=ไม่สามารถลบผู้ใช้งานที่มีบทบาทสูงได้");
     exit;
