@@ -284,7 +284,7 @@ $conn->close();
                                                 echo '<span class="badge bg-danger">ถูกปฏิเสธ</span>';
                                                 break;
                                             default:
-                                                echo '<span class="badge bg-secondary">ไม่ทราบ</span>';
+                                                echo '<span class="badge bg-secondary">ยกเลิก</span>';
                                         }
                                     ?>
                                 </td>
