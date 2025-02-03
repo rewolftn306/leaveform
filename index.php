@@ -1,8 +1,7 @@
 <?php
-// index.php
 session_start();
 
-// ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
+// ตรวจสอบการเข้าสู่ระบบ
 if (!isset($_SESSION['Username'])) {
     header("Location: login.php");
     exit;
@@ -10,10 +9,14 @@ if (!isset($_SESSION['Username'])) {
 
 include('connect.php');
 
+// ตรวจสอบการเชื่อมต่อ
+if ($conn->connect_error) {
+    die("Connection failed: " . $conn->connect_error);
+}
+
 // ดึงข้อมูลผู้ใช้
 $user_name = $_SESSION['Username'];
-
-$stmt = $conn->prepare("SELECT firstname, lastname, role FROM users WHERE username = ?");
+$stmt = $conn->prepare("SELECT firstname, lastname, role, profile_picture FROM users WHERE username = ?");
 $stmt->bind_param("s", $user_name);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -21,79 +24,68 @@ $result = $stmt->get_result();
 $firstname = '';
 $lastname = '';
 $role = '';
+$profile_picture = ''; // เพิ่มตัวแปรสำหรับรูปโปรไฟล์
 
 if ($result->num_rows > 0) {
     $row = $result->fetch_assoc();
     $firstname = htmlspecialchars($row['firstname']);
     $lastname = htmlspecialchars($row['lastname']);
     $role = htmlspecialchars($row['role']);
+    $profile_picture = $row['profile_picture']; // ดึงรูปโปรไฟล์
 } else {
     echo "ไม่พบข้อมูลผู้ใช้";
+    exit;
 }
+
 $stmt->close();
 
-// กำหนดค่าเริ่มต้นสำหรับกราฟ
-$chartData = [];
-$leaveTypes = [];
-
-// กรณี Role เป็น Admin หรือ Employee
+// คำสั่ง SQL สำหรับดึงข้อมูลการลา
 if ($role === 'Admin') {
-    // ดึงข้อมูลสำหรับตารางการลาของทุกคน
-    $sql = "
-        SELECT 
-            u.UserID, u.FirstName, u.LastName,
-            IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type,
-            la.StartDate, la.EndDate,
-            la.ApprovalStatus, la.Remarks, la.ApplicationID
-        FROM users u
-        LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
-        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-        WHERE la.LeaveTypeID IS NOT NULL
-    ";
+    $sql = "SELECT u.UserID, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
+            la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
+            FROM users u
+            LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
+            LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
+            WHERE la.LeaveTypeID IS NOT NULL";
 } else {
-    // กรณี Role เป็น Employee ให้ดึงข้อมูลเฉพาะของตัวเอง
-    $sql = "
-        SELECT 
-            u.FirstName, u.LastName,
-            IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type,
-            la.StartDate, la.EndDate,
-            la.ApprovalStatus, la.Remarks, la.ApplicationID
-        FROM users u
-        LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
-        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-        WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL
-    ";
+    $sql = "SELECT u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
+            la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
+            FROM users u
+            LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
+            LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
+            WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL";
 }
 
 $stmt = $conn->prepare($sql);
 if ($role !== 'Admin') {
-    $stmt->bind_param("s", $user_name); // binding user name for Employee role
+    $stmt->bind_param("s", $user_name);
 }
 $stmt->execute();
 $result = $stmt->get_result();
 
-$tableData = []; // กำหนดตัวแปร $tableData เพื่อเก็บข้อมูล
+$tableData = [];
+$chartData = [];
+$leaveTypes = [];
 
 if ($result) {
     while ($row = $result->fetch_assoc()) {
         $tableData[] = [
-            'user_id' => $row['UserID'] ?? null, // for Admin
+            'user_id' => $row['UserID'] ?? null,
             'name' => htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']),
             'leave_type' => htmlspecialchars($row['leave_type']),
             'start_date' => $row['StartDate'],
             'end_date' => $row['EndDate'],
             'approval_status' => htmlspecialchars($row['ApprovalStatus']),
             'remarks' => htmlspecialchars($row['Remarks']),
-            'application_id' => $row['ApplicationID'],  // แก้เป็น ApplicationID
+            'application_id' => $row['ApplicationID'],
         ];
 
-        // เพิ่มข้อมูลสำหรับกราฟ
         if (!in_array($row['leave_type'], $leaveTypes)) {
-            $leaveTypes[] = $row['leave_type']; // บันทึกประเภทการลา
+            $leaveTypes[] = $row['leave_type'];
         }
 
         if (!isset($chartData[$row['leave_type']])) {
-            $chartData[$row['leave_type']] = 0; // กำหนดค่าเริ่มต้นให้เป็น 0
+            $chartData[$row['leave_type']] = 0;
         }
         $chartData[$row['leave_type']] += 1;
     }
@@ -105,33 +97,7 @@ $conn->close();
 
 // แปลงข้อมูลกราฟให้เป็น JSON
 $chartLabels = json_encode(array_map(function($leave) {
-    // เปลี่ยนชื่อประเภทการลาให้สั้นลง
-    switch ($leave) {
-        case 'ลาป่วย':
-            return 'ลาป่วย';
-        case 'ลากิจส่วนตัว':
-            return 'ลากิจ';
-        case 'ลาพักผ่อน':
-            return 'ลาพักผ่อน';
-        case 'ลาบวช/ประกอบพิธีฮัจย์':
-            return 'ลาบวช';
-        case 'ลาไปถือศีลและปฏิบัติธรรม':
-            return 'ลาไปถือศีล';
-        case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
-            return 'ลาเข้ารับการตรวจเลือก';
-        case 'ลาดูแลบิดาหรือมารดา':
-            return 'ลาดูแลบิดา-มารดา';    
-        case 'การลาคลอดบุตร':
-            return 'การลาคลอดบุตร';
-        case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
-            return 'ลาเพื่อเลี้ยงดูบุตร';   
-        case 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร':
-            return 'ลาเพื่อแลบุตรและภรรยา';
-        case 'การลาติดตามคู่สมรส':
-            return 'การลาติดตามคู่สมรส';  
-        default:
-            return $leave;
-    }
+    return $leave; // คุณสามารถปรับเปลี่ยนตามประเภทการลาได้
 }, array_values($leaveTypes)));
 
 $chartValues = json_encode(array_values($chartData));
@@ -160,6 +126,16 @@ $chartValues = json_encode(array_values($chartData));
             justify-content: space-between;
             padding: 25px 0;
             border-bottom: 1px solid #ddd;
+        }
+        .profile-details {
+            display: flex;
+            align-items: center;
+        }
+        .profile-details img {
+            border-radius: 50%;
+            width: 100px;
+            height: 100px;
+            margin-right: 20px;
         }
         .profile-details h4 {
             margin: 0;
@@ -212,24 +188,33 @@ $chartValues = json_encode(array_values($chartData));
         <!-- Profile Section -->
         <div class="profile-section">
             <div class="profile-details">
-                <h4>ชื่อ: <?= $firstname . ' ' . $lastname; ?></h4>
-                <p>ตำแหน่ง: 
-                    <?php 
-                        switch ($role) {
-                            case 'Employee':
-                                echo 'พนักงาน';
-                                break;
-                            case 'Director':
-                                echo 'อธิบดี';
-                                break;
-                            case 'Admin':
-                                echo 'ผู้ดูแลระบบ';
-                                break;
-                            default:
-                                echo 'ไม่ระบุ';
-                        }
-                    ?>
-                </p>
+                <!-- รูปโปรไฟล์แสดงจากฐานข้อมูล -->
+                <?php if ($profile_picture): ?>
+                    <img src="/<?= htmlspecialchars($profile_picture); ?>" alt="Profile Picture">
+                <?php else: ?>
+                    <img src="default_profile_picture.jpg" alt="Default Profile Picture">
+                <?php endif; ?>
+                
+                <div>
+                    <h4>ชื่อ: <?= $firstname . ' ' . $lastname; ?></h4>
+                    <p>ตำแหน่ง: 
+                        <?php 
+                            switch ($role) {
+                                case 'Employee':
+                                    echo 'พนักงาน';
+                                    break;
+                                case 'Director':
+                                    echo 'อธิบดี';
+                                    break;
+                                case 'Admin':
+                                    echo 'ผู้ดูแลระบบ';
+                                    break;
+                                default:
+                                    echo 'ไม่ระบุ';
+                            }
+                        ?>
+                    </p>
+                </div>
             </div>
             <div class="buttons">
                 <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
@@ -275,18 +260,14 @@ $chartValues = json_encode(array_values($chartData));
                                 <td><?= $row['start_date'] . ' - ' . $row['end_date']; ?></td>
                                 <td><?= $row['approval_status']; ?></td>
                                 <td>
-                                    <?php if ($role === 'Admin'): ?>
-                                        <a href="view_user_leave.php?user_id=<?= $row['user_id']; ?>" class="btn btn-info">ดูรายละเอียด</a>
-                                    <?php else: ?>
-                                        <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal" 
-                                                data-name="<?= $row['name']; ?>" 
-                                                data-start="<?= $row['start_date']; ?>" 
-                                                data-end="<?= $row['end_date']; ?>" 
-                                                data-leave-type="<?= $row['leave_type']; ?>" 
-                                                data-status="<?= $row['approval_status']; ?>" 
-                                                data-remarks="<?= $row['remarks']; ?>" 
-                                                data-application-id="<?= $row['application_id']; ?>">ดูรายละเอียด</button>
-                                    <?php endif; ?>
+                                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal" 
+                                            data-name="<?= $row['name']; ?>" 
+                                            data-start="<?= $row['start_date']; ?>" 
+                                            data-end="<?= $row['end_date']; ?>" 
+                                            data-leave-type="<?= $row['leave_type']; ?>" 
+                                            data-status="<?= $row['approval_status']; ?>" 
+                                            data-remarks="<?= $row['remarks']; ?>" 
+                                            data-application-id="<?= $row['application_id']; ?>">ดูรายละเอียด</button>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -377,7 +358,7 @@ $chartValues = json_encode(array_values($chartData));
 
             // แสดงข้อมูลใน Modal
             leaveDetailModal.querySelector('.modal-title').textContent = 'รายละเอียดการลา: ' + name;
-            leaveDetailModal.querySelector('.modal-body').innerHTML = `
+            leaveDetailModal.querySelector('.modal-body').innerHTML = ` 
                 <p><strong>ชื่อ:</strong> ${name}</p>
                 <p><strong>ประเภทการลา:</strong> ${leaveType}</p>
                 <p><strong>วันที่เริ่ม:</strong> ${start}</p>
@@ -397,31 +378,28 @@ $chartValues = json_encode(array_values($chartData));
 
         // เมื่อกดปุ่มยกเลิกการลา
         document.getElementById('cancelLeaveButton').addEventListener('click', function() {
+            const applicationId = this.getAttribute('data-application-id');
+
+            if (!applicationId) {
+                alert('ไม่มีข้อมูลการลา');
+                return;
+            }
+
             if (confirm('คุณแน่ใจที่จะยกเลิกการลา?')) {
-                // ดึงค่า application_id จาก data-attribute
-                const applicationId = document.getElementById('cancelLeaveButton').getAttribute('data-application-id');
-
-                // ตรวจสอบว่า applicationId มีค่า
-                if (!applicationId) {
-                    alert('No Application ID provided!');
-                    return; // ถ้าไม่มี applicationId ส่งมาก็ไม่ทำการยกเลิก
-                }
-
-                // ส่งข้อมูลไปยัง PHP เพื่อลบหรือเปลี่ยนสถานะเป็น "Cancelled"
                 fetch('cancel_leave.php', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/x-www-form-urlencoded',
                     },
-                    body: `application_id=${applicationId}`  // ส่ง application_id ไปที่ cancel_leave.php
+                    body: `application_id=${applicationId}`
                 })
                 .then(response => response.text())
                 .then(data => {
                     if (data === 'success') {
                         alert('ยกเลิกการลาเรียบร้อย');
-                        location.reload();  // รีเฟรชหน้าเพื่ออัพเดตข้อมูล
+                        location.reload(); // รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
                     } else {
-                        alert('เกิดข้อผิดพลาดในการยกเลิกการลา: ' + data); // แสดงข้อความข้อผิดพลาดที่ได้รับจาก PHP
+                        alert('ไม่สามารถยกเลิกการลาได้: ' + data);
                     }
                 });
             }

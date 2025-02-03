@@ -283,6 +283,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                 <button type="submit" name="create_user" class="btn btn-primary w-100">สร้างบัญชีผู้ใช้งาน</button>
             </form>
             <a href="manage_approvers.php" class="btn-back">จัดการผู้อนุมัติ</a>
+            <a href="login.php" class="btn btn-danger float-end mt-3 w-20">ย้อนกลับ</a>
         </div>
     </div>
 

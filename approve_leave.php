@@ -169,24 +169,6 @@ $conn->close();
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>การอนุมัติการลา</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body {
-            background-color: #f4f4f9;
-            padding-top: 70px;
-        }
-        .header {
-            background-color: #343a40;
-            color: white;
-            padding: 15px;
-        }
-        .header .logo {
-            font-size: 24px;
-            font-weight: bold;
-        }
-        .header .user-info span {
-            margin-right: 10px;
-        }
-    </style>
 </head>
 <body>
 
@@ -204,10 +186,12 @@ $conn->close();
     </nav>
 
     <!-- Main Container -->
-    <div class="container">
+    <div class="container mt-5">
 
         <!-- Search and Filter Form -->
-        <form method="GET" class="mt-4">
+        <form method="GET" style="margin-top: 70px;">
+
+        
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -288,22 +272,56 @@ $conn->close();
                                         }
                                     ?>
                                 </td>
-                                <td><?= htmlspecialchars($leave['Remarks']); ?></td>
                                 <td>
-                                    <?php if ($leave['ApprovalStatus'] === 'Pending'): ?>
-                                        <form method="POST" class="d-inline">
-                                            <input type="hidden" name="leave_id" value="<?= intval($leave['ApplicationID']); ?>">
-                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
-                                            <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm('คุณต้องการอนุมัติการลานี้หรือไม่?');">อนุมัติ</button>
-                                        </form>
-                                        <form method="POST" class="d-inline">
-                                            <input type="hidden" name="leave_id" value="<?= intval($leave['ApplicationID']); ?>">
-                                            <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
-                                            <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm('คุณต้องการปฏิเสธการลานี้หรือไม่?');">ปฏิเสธ</button>
-                                        </form>
-                                    <?php else: ?>
-                                        <button class="btn btn-sm btn-secondary" disabled>ไม่สามารถดำเนินการ</button>
-                                    <?php endif; ?>
+                                    <!-- ปุ่มดูรายละเอียด -->
+                                    <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal" data-bs-target="#remarkModal<?= $leave['ApplicationID']; ?>">
+                                        ดูรายละเอียด
+                                    </button>
+
+                                    <!-- Modal สำหรับการแสดงหมายเหตุ -->
+                                    <div class="modal fade" id="remarkModal<?= $leave['ApplicationID']; ?>" tabindex="-1" aria-labelledby="remarkModalLabel<?= $leave['ApplicationID']; ?>" aria-hidden="true">
+                                        <div class="modal-dialog">
+                                            <div class="modal-content">
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="remarkModalLabel<?= $leave['ApplicationID']; ?>">รายละเอียดหมายเหตุ</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <?= nl2br(htmlspecialchars($leave['Remarks'])); ?>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </td>
+                                <td>
+                                    <?php switch ($leave['ApprovalStatus']) {
+                                            case 'Approved':
+                                                echo '<span class="badge bg-success">ดำเนินการแล้ว</span>';
+                                                break;
+                                            case 'Pending':
+                                                echo '<form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                    </form>
+                                                    <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                    </form>';
+                                                break;
+                                            case 'Rejected':
+                                                echo '<span class="badge bg-danger">ดำเนินการแล้ว</span>';
+                                                break;
+                                            case 'Cancelled':
+                                                echo '<span class="badge bg-secondary">ยกเลิกการดำเนินการ</span>';
+                                                break;
+                                            default:
+                                                echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
+                                        } ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
