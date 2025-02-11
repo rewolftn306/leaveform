@@ -78,27 +78,19 @@ if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] ===
         exit();
     }
 
-    $target_dir = "uploads/";
-    // ตรวจสอบว่าโฟลเดอร์ uploads มีอยู่และมีสิทธิ์เขียนไฟล์
-    if (!is_dir($target_dir)) {
-        mkdir($target_dir, 0755, true);
-    }
+    // อ่านเนื้อหาของไฟล์แล้วแปลงเป็น base64
+    $image_data = file_get_contents($_FILES['profile_picture']['tmp_name']);
+    $base64_image = base64_encode($image_data);
 
-    // สร้างชื่อไฟล์แบบไม่ซ้ำกัน
-    $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-    $unique_name = uniqid('profile_', true) . '.' . $file_extension;
-    $target_file = $target_dir . $unique_name;
+    // เก็บรูปแบบ base64 พร้อม MIME type
+    $profile_picture = "data:$file_type;base64," . $base64_image;
 
-    if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
-        header("Location: register.php?error=ไม่สามารถอัปโหลดรูปภาพได้");
-        exit();
-    }
-
-    $profile_picture = $target_file;
+    // 📌 ณ จุดนี้ สามารถนำ `$profile_picture` ไปบันทึกลงฐานข้อมูลได้
 } else {
     header("Location: register.php?error=กรุณาอัปโหลดรูปภาพโปรไฟล์");
     exit();
 }
+
 
 // แฮชรหัสผ่าน
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);

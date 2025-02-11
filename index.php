@@ -190,7 +190,7 @@ $chartValues = json_encode(array_values($chartData));
             <div class="profile-details">
                 <!-- รูปโปรไฟล์แสดงจากฐานข้อมูล -->
                 <?php if ($profile_picture): ?>
-                    <img src="/<?= htmlspecialchars($profile_picture); ?>" alt="Profile Picture">
+                    <img src="<?= htmlspecialchars($profile_picture); ?>" alt="Profile Picture">
                 <?php else: ?>
                     <img src="default_profile_picture.jpg" alt="Default Profile Picture">
                 <?php endif; ?>
