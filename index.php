@@ -69,6 +69,18 @@ $leaveTypes = [];
 
 if ($result) {
     while ($row = $result->fetch_assoc()) {
+        // คำนวณจำนวนวันลา
+        $start_date = new DateTime($row['StartDate']);
+        $end_date = new DateTime($row['EndDate']);
+        $interval = $start_date->diff($end_date);
+        $leave_days = $interval->days; // นับจำนวนวันไม่รวมวันเริ่ม
+        if ($start_date != $end_date) {
+            $leave_days = $interval->days; // ถ้า StartDate ไม่เหมือน EndDate จะคำนวณจำนวนวัน
+        } else {
+            $leave_days = 1; // ถ้า StartDate กับ EndDate ตรงกัน ก็ให้ถือว่าเป็น 1 วัน
+        }
+
+        // เพิ่มข้อมูลลงในตาราง
         $tableData[] = [
             'user_id' => $row['UserID'] ?? null,
             'name' => htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']),
@@ -78,16 +90,19 @@ if ($result) {
             'approval_status' => htmlspecialchars($row['ApprovalStatus']),
             'remarks' => htmlspecialchars($row['Remarks']),
             'application_id' => $row['ApplicationID'],
+            'leave_days' => $leave_days, // จำนวนวันลา
         ];
 
+        // ตรวจสอบประเภทการลาเพื่อใช้ในกราฟ
         if (!in_array($row['leave_type'], $leaveTypes)) {
             $leaveTypes[] = $row['leave_type'];
         }
 
+        // คำนวณจำนวนวันลาในกราฟ
         if (!isset($chartData[$row['leave_type']])) {
             $chartData[$row['leave_type']] = 0;
         }
-        $chartData[$row['leave_type']] += 1;
+        $chartData[$row['leave_type']] += $leave_days; // เพิ่มจำนวนวันลาในประเภทการลา
     }
 } else {
     error_log("Data Fetch Failed: " . $conn->error);
@@ -97,10 +112,10 @@ $conn->close();
 
 // แปลงข้อมูลกราฟให้เป็น JSON
 $chartLabels = json_encode(array_map(function($leave) {
-    return $leave; // คุณสามารถปรับเปลี่ยนตามประเภทการลาได้
+    return $leave; // ชื่อประเภทการลา
 }, array_values($leaveTypes)));
 
-$chartValues = json_encode(array_values($chartData));
+$chartValues = json_encode(array_values($chartData)); // จำนวนวันลา
 ?>
 
 <!DOCTYPE html>
@@ -247,6 +262,7 @@ $chartValues = json_encode(array_values($chartData));
                         <th>ประเภทการลา</th>
                         <th>วันที่เริ่ม-วันที่สิ้นสุด</th>
                         <th>สถานะ</th>
+                        <th>จำนวนวันลา</th>
                         <th>รายละเอียด</th>
                     </tr>
                 </thead>
@@ -259,6 +275,7 @@ $chartValues = json_encode(array_values($chartData));
                                 <td><?= $row['leave_type']; ?></td>
                                 <td><?= $row['start_date'] . ' - ' . $row['end_date']; ?></td>
                                 <td><?= $row['approval_status']; ?></td>
+                                <td><?= $row['leave_days']; ?> วัน</td>
                                 <td>
                                     <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal" 
                                             data-name="<?= $row['name']; ?>" 
@@ -273,7 +290,7 @@ $chartValues = json_encode(array_values($chartData));
                         <?php endforeach; ?>
                     <?php else: ?>
                         <tr>
-                            <td colspan="6" class="text-center">ไม่มีข้อมูลการลางาน</td>
+                            <td colspan="7" class="text-center">ไม่มีข้อมูลการลางาน</td>
                         </tr>
                     <?php endif; ?>
                 </tbody>
@@ -309,7 +326,7 @@ $chartValues = json_encode(array_values($chartData));
             data: {
                 labels: <?= $chartLabels; ?>, // labels from leavetypes
                 datasets: [{
-                    label: 'จำนวนการลา',
+                    label: 'จำนวนวันลา',
                     data: <?= $chartValues; ?>, // data from leave applications
                     backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
                     borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
@@ -334,76 +351,14 @@ $chartValues = json_encode(array_values($chartData));
                     tooltip: {
                         callbacks: {
                             label: function(context) {
-                                return context.parsed.y + ' ครั้ง';
+                                return context.parsed.y + ' วัน'; // แสดงจำนวนวันลา
                             }
                         }
                     }
                 }
             }
         });
-
-        // Popup Modal - Show data
-        const leaveDetailModal = document.getElementById('leaveDetailModal');
-        leaveDetailModal.addEventListener('show.bs.modal', function(event) {
-            const button = event.relatedTarget;
-            
-            // ดึงข้อมูลจาก data-attributes ของปุ่ม
-            const name = button.getAttribute('data-name');
-            const start = button.getAttribute('data-start');
-            const end = button.getAttribute('data-end');
-            const leaveType = button.getAttribute('data-leave-type');
-            const status = button.getAttribute('data-status');
-            const remarks = button.getAttribute('data-remarks');
-            const applicationId = button.getAttribute('data-application-id');  // Added application ID for canceling
-
-            // แสดงข้อมูลใน Modal
-            leaveDetailModal.querySelector('.modal-title').textContent = 'รายละเอียดการลา: ' + name;
-            leaveDetailModal.querySelector('.modal-body').innerHTML = ` 
-                <p><strong>ชื่อ:</strong> ${name}</p>
-                <p><strong>ประเภทการลา:</strong> ${leaveType}</p>
-                <p><strong>วันที่เริ่ม:</strong> ${start}</p>
-                <p><strong>วันที่สิ้นสุด:</strong> ${end}</p>
-                <p><strong>สถานะ:</strong> ${status}</p>
-                <p><strong>หมายเหตุ:</strong> ${remarks}</p>
-            `;
-
-            // ถ้าสถานะเป็น Pending ให้แสดงปุ่ม "ยกเลิกการลา"
-            if (status === 'Pending') {
-                document.getElementById('cancelLeaveButton').style.display = 'inline-block';
-                document.getElementById('cancelLeaveButton').setAttribute('data-application-id', applicationId);
-            } else {
-                document.getElementById('cancelLeaveButton').style.display = 'none';
-            }
-        });
-
-        // เมื่อกดปุ่มยกเลิกการลา
-        document.getElementById('cancelLeaveButton').addEventListener('click', function() {
-            const applicationId = this.getAttribute('data-application-id');
-
-            if (!applicationId) {
-                alert('ไม่มีข้อมูลการลา');
-                return;
-            }
-
-            if (confirm('คุณแน่ใจที่จะยกเลิกการลา?')) {
-                fetch('cancel_leave.php', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/x-www-form-urlencoded',
-                    },
-                    body: `application_id=${applicationId}`
-                })
-                .then(response => response.text())
-                .then(data => {
-                    if (data === 'success') {
-                        alert('ยกเลิกการลาเรียบร้อย');
-                        location.reload(); // รีเฟรชหน้าเพื่อแสดงข้อมูลใหม่
-                    } else {
-                        alert('ไม่สามารถยกเลิกการลาได้: ' + data);
-                    }
-                });
-            }
-        });
     </script>
+
 </body>
 </html>
