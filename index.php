@@ -304,13 +304,19 @@ $chartValues = json_encode(array_values($chartData)); // จำนวนวั�
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
-                    <h5 class="modal-title" id="leaveDetailModalLabel"></h5>
+                    <h5 class="modal-title" id="leaveDetailModalLabel">รายละเอียดการลา</h5>
                     <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                 </div>
-                <div class="modal-body"></div>
+                <div class="modal-body">
+                    <p><strong>ประเภทการลา:</strong> <span id="modal-leave-type"></span></p>
+                    <p><strong>วันที่ลา:</strong> <span id="modal-start-date"></span> ถึง <span id="modal-end-date"></span></p>
+                    <p><strong>สถานะ:</strong> <span id="modal-status"></span></p>
+                    <p><strong>หมายเหตุ:</strong> <span id="modal-remarks"></span></p>
+                </div>
                 <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" id="printLeaveButton">พิมพ์</button>
                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
-                    <button type="button" id="cancelLeaveButton" class="btn btn-danger" style="display: none;">ยกเลิกการลา</button>
+                    <button type="button" class="btn btn-danger" id="cancelLeaveButton" style="display: none;">ยกเลิกการลา</button>
                 </div>
             </div>
         </div>
@@ -319,45 +325,43 @@ $chartValues = json_encode(array_values($chartData)); // จำนวนวั�
     <!-- Bootstrap JS และ Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Graph generation
-        const ctx = document.getElementById('leaveChart').getContext('2d');
-        const leaveChart = new Chart(ctx, {
-            type: 'bar',
-            data: {
-                labels: <?= $chartLabels; ?>, // labels from leavetypes
-                datasets: [{
-                    label: 'จำนวนวันลา',
-                    data: <?= $chartValues; ?>, // data from leave applications
-                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
-                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                scales: {
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
-                },
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    tooltip: {
-                        callbacks: {
-                            label: function(context) {
-                                return context.parsed.y + ' วัน'; // แสดงจำนวนวันลา
-                            }
-                        }
-                    }
+    document.addEventListener("DOMContentLoaded", function() {
+        var leaveDetailModal = document.getElementById('leaveDetailModal');
+
+        if (leaveDetailModal) {
+            leaveDetailModal.addEventListener('show.bs.modal', function(event) {
+                var button = event.relatedTarget; 
+                var name = button.getAttribute('data-name');
+                var start = button.getAttribute('data-start');
+                var end = button.getAttribute('data-end');
+                var leaveType = button.getAttribute('data-leave-type');
+                var status = button.getAttribute('data-status');
+                var remarks = button.getAttribute('data-remarks');
+                var applicationId = button.getAttribute('data-application-id');
+
+                document.getElementById('modal-leave-type').textContent = leaveType;
+                document.getElementById('modal-start-date').textContent = start;
+                document.getElementById('modal-end-date').textContent = end;
+                document.getElementById('modal-status').textContent = status;
+                document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
+
+                var cancelLeaveButton = document.getElementById('cancelLeaveButton');
+                if (status === 'รออนุมัติ') {
+                    cancelLeaveButton.style.display = 'inline-block';
+                    cancelLeaveButton.setAttribute('data-application-id', applicationId);
+                } else {
+                    cancelLeaveButton.style.display = 'none';
                 }
-            }
-        });
+            });
+
+            document.getElementById('cancelLeaveButton').addEventListener('click', function() {
+                var applicationId = this.getAttribute('data-application-id');
+                if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
+                    window.location.href = 'cancel_leave.php?id=' + applicationId;
+                }
+            });
+        }
+    });
     </script>
 
 </body>
