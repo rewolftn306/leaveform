@@ -329,7 +329,47 @@ $chartValues = json_encode(array_values($chartData));
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
+    <script>
+        // Graph generation
+        const ctx = document.getElementById('leaveChart').getContext('2d');
+        const leaveChart = new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: <?= $chartLabels; ?>, // labels from leavetypes
+                datasets: [{
+                    label: 'จำนวนวันลา',
+                    data: <?= $chartValues; ?>, // data from leave applications
+                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
+                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        ticks: {
+                            precision: 0
+                        }
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                return context.parsed.y + ' วัน'; // แสดงจำนวนวันลา
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    </script>
     <script>
     document.addEventListener("DOMContentLoaded", function() {
         var leaveDetailModal = document.getElementById('leaveDetailModal');
