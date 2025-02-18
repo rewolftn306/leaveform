@@ -314,55 +314,77 @@ $chartValues = json_encode(array_values($chartData)); // จำนวนวั�
                     <p><strong>หมายเหตุ:</strong> <span id="modal-remarks"></span></p>
                 </div>
                 <div class="modal-footer">
-                    <button type="button" class="btn btn-primary" id="printLeaveButton">พิมพ์</button>
-                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                     <button type="button" class="btn btn-primary" id="printDocumentButton">พิมพ์เอกสาร</button>
                     <button type="button" class="btn btn-danger" id="cancelLeaveButton" style="display: none;">ยกเลิกการลา</button>
                 </div>
+
             </div>
         </div>
     </div>
 
-    <!-- Bootstrap JS และ Chart.js -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var leaveDetailModal = document.getElementById('leaveDetailModal');
+    <!-- Bootstrap JS -->
+<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-        if (leaveDetailModal) {
-            leaveDetailModal.addEventListener('show.bs.modal', function(event) {
-                var button = event.relatedTarget; 
-                var name = button.getAttribute('data-name');
-                var start = button.getAttribute('data-start');
-                var end = button.getAttribute('data-end');
-                var leaveType = button.getAttribute('data-leave-type');
-                var status = button.getAttribute('data-status');
-                var remarks = button.getAttribute('data-remarks');
-                var applicationId = button.getAttribute('data-application-id');
+<script>
+document.addEventListener("DOMContentLoaded", function() {
+    var leaveDetailModal = document.getElementById('leaveDetailModal');
 
-                document.getElementById('modal-leave-type').textContent = leaveType;
-                document.getElementById('modal-start-date').textContent = start;
-                document.getElementById('modal-end-date').textContent = end;
-                document.getElementById('modal-status').textContent = status;
-                document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
+    if (leaveDetailModal) {
+        // เมื่อ Modal เปิดขึ้น
+        leaveDetailModal.addEventListener('show.bs.modal', function(event) {
+            var button = event.relatedTarget; 
+            var name = button.getAttribute('data-name');
+            var start = button.getAttribute('data-start');
+            var end = button.getAttribute('data-end');
+            var leaveType = button.getAttribute('data-leave-type');
+            var status = button.getAttribute('data-status');
+            var remarks = button.getAttribute('data-remarks');
+            var applicationId = button.getAttribute('data-application-id');
 
-                var cancelLeaveButton = document.getElementById('cancelLeaveButton');
-                if (status === 'รออนุมัติ') {
-                    cancelLeaveButton.style.display = 'inline-block';
-                    cancelLeaveButton.setAttribute('data-application-id', applicationId);
-                } else {
-                    cancelLeaveButton.style.display = 'none';
-                }
-            });
+            // ใส่ค่าลงใน Modal
+            document.getElementById('modal-leave-type').textContent = leaveType;
+            document.getElementById('modal-start-date').textContent = start;
+            document.getElementById('modal-end-date').textContent = end;
+            document.getElementById('modal-status').textContent = status;
+            document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
 
-            document.getElementById('cancelLeaveButton').addEventListener('click', function() {
-                var applicationId = this.getAttribute('data-application-id');
-                if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
-                    window.location.href = 'cancel_leave.php?id=' + applicationId;
-                }
-            });
-        }
-    });
-    </script>
+            var cancelLeaveButton = document.getElementById('cancelLeaveButton');
+            var printDocumentButton = document.getElementById('printDocumentButton');
+
+            // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
+            if (status === 'รออนุมัติ') {
+                cancelLeaveButton.style.display = 'inline-block';
+                cancelLeaveButton.setAttribute('data-application-id', applicationId);
+            } else {
+                cancelLeaveButton.style.display = 'none';
+            }
+
+            // ใส่ application ID สำหรับพิมพ์เอกสาร
+            printDocumentButton.setAttribute('data-application-id', applicationId);
+        });
+
+        // ฟังก์ชันปุ่ม "ยกเลิกการลา"
+        document.getElementById('cancelLeaveButton').addEventListener('click', function() {
+            var applicationId = this.getAttribute('data-application-id');
+            if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
+                window.location.href = 'cancel_leave.php?id=' + applicationId;
+            }
+        });
+
+        // ฟังก์ชันปุ่ม "พิมพ์เอกสาร"
+        document.getElementById('printDocumentButton').addEventListener('click', function() {
+            var applicationId = this.getAttribute('data-application-id');
+            if (applicationId) {
+                window.location.href = 'generate_word.php?id=' + applicationId;
+            } else {
+                alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
+            }
+        });
+    }
+});
+</script>
+
 
 </body>
 </html>
