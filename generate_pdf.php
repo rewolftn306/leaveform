@@ -129,7 +129,11 @@ switch ($leaveType) {
     case 'ลาป่วย':
     case 'ลากิจส่วนตัว':
     case 'การลาคลอดบุตร':
+    case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
+    case 'ลาดูแลบิดาหรือมารดา':
+    case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
         // แปลงวันที่เป็นภาษาไทย
+        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $formattedDate = convertToThaiDate($leaveData['CreateDate']);
         $pdf->SetXY(130, 33.5);
         $pdf->Write(0, convertThai('' . $formattedDate));
@@ -165,17 +169,34 @@ switch ($leaveType) {
                 break;
         
         }
-        
         $pdf->SetXY(61, 39.75);
         $pdf->Write(0, convertThai($leaveType)); // เช่น ลาป่วย, ลากิจส่วนตัว
         $pdf->SetXY(48, 88.5);
         $pdf->Write(0, convertThai($leaveData['StartDate']));
         $pdf->SetXY(108, 88.5);
         $pdf->Write(0, convertThai($leaveData['EndDate']));
-        
         break;
-    
+
+    case 'ลาบวช/ประกอบพิธีฮัจย์':
+    case 'ลาไปถือศีลและปฏิบัติธรรม':
+        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
+        $formattedDate = convertToThaiDate($leaveData['CreateDate']);
+        $pdf->SetXY(124, 35.25);
+        $pdf->Write(0, convertThai('' . $formattedDate));
+        $pdf->SetXY(130, 71);
+        $pdf->Write(0, convertThai('' . $leaveData['Position']));
+        $pdf->SetXY(40, 79.5);
+        $pdf->Write(0, convertThai('' . $leaveData['Department']));
+        $pdf->SetXY(58, 73);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->SetXY(110, 120);
+        $pdf->Write(0, convertThai($leaveData['StartDate']));
+        $pdf->SetXY(38, 128);
+        $pdf->Write(0, convertThai($leaveData['EndDate']));
+        break;
+
     case 'ลาพักผ่อน':
+        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $formattedDate = convertToThaiDate($leaveData['CreateDate']);
         $pdf->SetXY(129, 35);
         $pdf->Write(0, convertThai('' . $formattedDate));
@@ -194,6 +215,7 @@ switch ($leaveType) {
         break;
     
     case 'ขอยกเลิกวันลา':
+        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $pdf->SetXY(50, 50);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->SetXY(50, 57);
@@ -205,6 +227,7 @@ switch ($leaveType) {
         break;
     
     case 'ลาพักผ่อนไปต่างประเทศ':
+        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $pdf->SetXY(50, 40);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->SetXY(50, 47);
