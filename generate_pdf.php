@@ -17,10 +17,12 @@ $applicationId = $_GET['id'];
 include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
-$stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, la.CreateDate
+$stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, 
+                               e.Position, e.Department, e.Tel, la.CreateDate
                         FROM leaveapplications la 
                         JOIN users u ON la.EmployeeID = u.UserID 
                         LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID 
+                        LEFT JOIN employees e ON la.EmployeeID = e.EmployeeID
                         WHERE la.ApplicationID = ?");
 $stmt->bind_param("i", $applicationId);
 $stmt->execute();
@@ -31,6 +33,7 @@ if ($result->num_rows == 0) {
 $leaveData = $result->fetch_assoc();
 $stmt->close();
 $conn->close();
+
 
 // Determine the correct template based on leave type
 $leaveType = $leaveData['leave_type'];
@@ -102,6 +105,15 @@ function convertToThaiDate($date) {
     return $day . '             ' . $thaiMonths[$month] . '           ' . $year;
 }
 
+function drawTick($pdf, $x, $y, $isChecked) {
+    if ($isChecked) {
+        // วาดเครื่องหมายติ๊กถูก
+        $pdf->SetLineWidth(0.4); // กำหนดความหนาของเส้น
+        $pdf->Line($x, $y + 1, $x + 2, $y + 3); // เส้นแรก
+        $pdf->Line($x + 2, $y + 3, $x + 6, $y); // เส้นที่สอง
+    }
+}
+
 // Insert data based on the template
 switch ($leaveType) {
     case 'ลาป่วย':
@@ -109,26 +121,66 @@ switch ($leaveType) {
     case 'การลาคลอดบุตร':
         // แปลงวันที่เป็นภาษาไทย
         $formattedDate = convertToThaiDate($leaveData['CreateDate']);
-        $pdf->SetXY(130, 33.5); // ปรับตำแหน่งตามที่เหมาะสม
+        $pdf->SetXY(130, 33.5);
         $pdf->Write(0, convertThai('' . $formattedDate));
-        $pdf->SetXY(56, 57);
-        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
-        $pdf->SetXY(50, 69);
+        $pdf->SetXY(130, 56.75);
+        $pdf->Write(0, convertThai('' . $leaveData['Position']));
+        $pdf->SetXY(70, 63);
+        $pdf->Write(0, convertThai('' . $leaveData['Department']));
+        $pdf->SetXY(148, 107.75);
+        $pdf->Write(0, convertThai('' . $leaveData['Tel']));
+        $pdf->SetXY(56, 56.75);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . '  ' . $leaveData['LastName']));
+        switch ($leaveType) {
+            case 'ลาป่วย':
+                // ติ๊กที่ช่อง "ลาป่วย"
+                drawTick($pdf, 56, 68, true); // ตำแหน่งของ "ลาป่วย" checkbox
+                drawTick($pdf, 52.25, 93.5, true); // ตำแหน่งของ "ลาป่วย" checkbox
+                $remarksText = $leaveData['Remarks'] ? $leaveData['Remarks'] : 'ไม่มีหมายเหตุ';
+                $pdf->SetXY(88, 69.5);  // ปรับตำแหน่งของหมายเหตุในช่อง "ลาป่วย"
+                $pdf->Write(0, convertThai('' . $remarksText));
+                break;
+            
+            case 'ลากิจส่วนตัว':
+                // ติ๊กที่ช่อง "ลากิจส่วนตัว"
+                drawTick($pdf, 56, 74.5, true); // ตำแหน่งของ "ลากิจส่วนตัว" checkbox
+                $remarksText = $leaveData['Remarks'] ? $leaveData['Remarks'] : 'ไม่มีหมายเหตุ';
+                $pdf->SetXY(97,76);  // ปรับตำแหน่งของหมายเหตุในช่อง "ลากิจส่วนตัว"
+                $pdf->Write(0, convertThai('' . $remarksText));
+                break;
+        
+            case 'การลาคลอดบุตร':
+                // ติ๊กที่ช่อง "การลาคลอดบุตร" (ถ้ามี)
+                drawTick($pdf, 56, 81, true); // ตำแหน่งของ "การลาคลอดบุตร" checkbox
+                break;
+        
+        }
+        
+        $pdf->SetXY(61, 39.75);
         $pdf->Write(0, convertThai($leaveType)); // เช่น ลาป่วย, ลากิจส่วนตัว
-        $pdf->SetXY(50, 83);
+        $pdf->SetXY(48, 88.5);
         $pdf->Write(0, convertThai($leaveData['StartDate']));
-        $pdf->SetXY(120, 83);
+        $pdf->SetXY(108, 88.5);
         $pdf->Write(0, convertThai($leaveData['EndDate']));
         
         break;
     
     case 'ลาพักผ่อน':
-        $pdf->SetXY(56, 56.5);
+        $formattedDate = convertToThaiDate($leaveData['CreateDate']);
+        $pdf->SetXY(129, 35);
+        $pdf->Write(0, convertThai('' . $formattedDate));
+        $pdf->SetXY(130, 62.5);
+        $pdf->Write(0, convertThai('' . $leaveData['Position']));
+        $pdf->SetXY(40, 69);
+        $pdf->Write(0, convertThai('' . $leaveData['Department']));
+        $pdf->SetXY(56, 62.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
-        $pdf->SetXY(47, 88);
+        $pdf->SetXY(66, 82);
         $pdf->Write(0, convertThai($leaveData['StartDate']));
-        $pdf->SetXY(107, 88);
+        $pdf->SetXY(118, 82);
         $pdf->Write(0, convertThai($leaveData['EndDate']));
+        $pdf->SetXY(148, 94);
+        $pdf->Write(0, convertThai('' . $leaveData['Tel']));
         break;
     
     case 'ขอยกเลิกวันลา':
@@ -154,9 +206,6 @@ switch ($leaveType) {
         break;
 }
 
-// Common fields for all templates
-$pdf->SetXY(50, 100);
-$pdf->Write(0, convertThai('หมายเหตุ: ' . ($leaveData['Remarks'] ? $leaveData['Remarks'] : 'ไม่มี')));
 
 // Output PDF to browser
 $pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
