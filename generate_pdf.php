@@ -1,39 +1,50 @@
 <?php
-// Set UTF-8 encoding for the page
-header('Content-Type: text/html; charset=utf-8');
-
-// Load Composer autoload for FPDI/FPDF
-require_once('vendor/autoload.php');
-
-use setasign\Fpdi\Fpdi;
-
-// Check for the required parameter
-if (!isset($_GET['id'])) {
-    die('ไม่พบข้อมูลใบลา');
-}
-$applicationId = $_GET['id'];
-
-// Database connection and query
+// เชื่อมต่อฐานข้อมูล
 include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
-$stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type 
+// ตรวจสอบว่าได้รับ ApplicationID หรือไม่
+if (!isset($_GET['id']) || empty($_GET['id'])) {
+    die('ไม่พบ ApplicationID');
+}
+
+$applicationId = $_GET['id'];
+
+// ตรวจสอบค่า ApplicationID
+echo "ApplicationID: " . htmlspecialchars($applicationId);  // แสดง ApplicationID ที่ได้รับจาก URL
+
+// ดึงข้อมูลจากฐานข้อมูล
+$stmt = $conn->prepare("SELECT u.UserID, u.FirstName, u.LastName, e.Position AS EmployeePosition, e.Department AS EmployeeDepartment, e.Email AS EmployeeEmail, e.Tel AS EmployeeTel, e.Name AS EmployeeName, la.StartDate, la.EndDate, la.Remarks, lt.LeaveName AS LeaveType 
                         FROM leaveapplications la 
-                        JOIN users u ON la.EmployeeID = u.UserID 
-                        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID 
+                        JOIN users u ON la.EmployeeID = u.UserID
+                        JOIN employees e ON e.UserID = u.UserID
+                        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
                         WHERE la.ApplicationID = ?");
-$stmt->bind_param("i", $applicationId);
+$stmt->bind_param("i", $applicationId);  // ใช้ "i" สำหรับ integer ที่เป็น ApplicationID
 $stmt->execute();
 $result = $stmt->get_result();
+
 if ($result->num_rows == 0) {
     die('ไม่พบข้อมูลใบลา');
 }
+
 $leaveData = $result->fetch_assoc();
 $stmt->close();
 $conn->close();
 
-// Determine the leave type and corresponding template
-$leaveType = $leaveData['leave_type'];
+// ใช้ FPDI สำหรับการสร้าง PDF
+require_once('vendor/autoload.php');
+use setasign\Fpdi\Fpdi;
+
+$pdf = new Fpdi();
+$pdf->AddPage();
+
+// กำหนดฟอนต์ไทย
+$pdf->AddFont('THSarabunNew', '', 'THSarabunNew.php');
+$pdf->SetFont('THSarabunNew', '', 14);
+
+// เลือกฟอร์มที่เหมาะสม
+$leaveType = $leaveData['LeaveType'];
 switch ($leaveType) {
     case 'ลาป่วย':
     case 'ลากิจส่วนตัว':
@@ -54,92 +65,45 @@ switch ($leaveType) {
         break;
 }
 
-if (!file_exists($templatePath)) {
-    die("ไม่พบไฟล์ template: " . $templatePath);
-}
+// โหลดเทมเพลต PDF
+$pdf->setSourceFile($templatePath);
+$tplIdx = $pdf->importPage(1);
+$pdf->useTemplate($tplIdx);
 
-// Create PDF using FPDI
-$pdf = new Fpdi();
-$pdf->AddPage();
-
-// Load Thai font
-$pdf->AddFont('THSarabunNew', '', 'THSarabunNew.php');
-$pdf->SetFont('THSarabunNew', '', 14);
-
-// Load PDF template
-try {
-    $pageCount = $pdf->setSourceFile($templatePath);
-    $tplIdx = $pdf->importPage(1);
-    $pdf->useTemplate($tplIdx);
-} catch (Exception $e) {
-    die("ไม่สามารถโหลดไฟล์ PDF: " . $e->getMessage());
-}
-
-$pdf->SetTextColor(0, 0, 0);
-
-// Function to convert Thai text
-function convertThai($text) {
-    return iconv("UTF-8", "Windows-874//IGNORE", $text);
-}
-
-// Function for Thai date formatting
+// ฟังก์ชันแปลงวันที่เป็นไทย
 function thaiDate($date) {
     $thaiMonth = [
         'มกราคม', 'กุมภาพันธ์', 'มีนาคม', 'เมษายน', 'พฤษภาคม', 'มิถุนายน',
         'กรกฎาคม', 'สิงหาคม', 'กันยายน', 'ตุลาคม', 'พฤศจิกายน', 'ธันวาคม'
     ];
     $d = date_create($date);
-    return date_format($d, 'j') . ' ' . 
-           $thaiMonth[date_format($d, 'n')-1] . ' ' . 
-           (date_format($d, 'Y') + 543);
+    return date_format($d, 'j') . ' ' . $thaiMonth[date_format($d, 'n')-1] . ' ' . (date_format($d, 'Y') + 543);
 }
 
-// Set coordinates based on leave type
-switch ($leaveType) {
-    case 'ลาป่วย':
-    case 'ลากิจส่วนตัว':
-    case 'การลาคลอดบุตร':
-        $fields = [
-            'name' => [56, 56.5],
-            'position' => [78, 64],
-            'department' => [82, 71],
-            'start_date' => [47, 88],
-            'end_date' => [107, 88],
-            'days' => [150, 88],
-            'reason' => [52, 96]
-        ];
-        break;
-    case 'ลาพักผ่อน':
-        $fields = [
-            'name' => [56, 56.5],
-            'position' => [78, 64],
-            'department' => [82, 71],
-            'start_date' => [47, 88],
-            'end_date' => [107, 88],
-            'days' => [150, 88],
-            'contact' => [52, 96]
-        ];
-        break;
-    case 'ลาพักผ่อนไปต่างประเทศ':
-        $fields = [
-            'name' => [45, 82],
-            'position' => [45, 90],
-            'start_date' => [45, 105],
-            'end_date' => [100, 105],
-            'days' => [150, 105],
-            'contact' => [45, 115],
-            'delegation' => [45, 145]
-        ];
-        break;
-    // Add other leave types as needed
-}
+// กำหนดตำแหน่งกรอกข้อมูล
+$fields = [
+    'employee_name' => [56, 56.5],
+    'employee_position' => [78, 64],
+    'employee_department' => [82, 71],
+    'start_date' => [47, 88],
+    'end_date' => [107, 88],
+    'leave_type' => [52, 96],
+    'employee_tel' => [52, 102]
+];
 
-// Fill in the form fields
+// กรอกข้อมูลลงในฟอร์ม
+$pdf->SetTextColor(0, 0, 0); // สีข้อความ
 foreach ($fields as $field => $coordinates) {
     $pdf->SetXY($coordinates[0], $coordinates[1]);
     switch ($field) {
-        case 'name':
-            $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        case 'employee_name':
+            $pdf->Write(0, convertThai($leaveData['EmployeeName']));
+            break;
+        case 'employee_position':
+            $pdf->Write(0, convertThai($leaveData['EmployeePosition']));
+            break;
+        case 'employee_department':
+            $pdf->Write(0, convertThai($leaveData['EmployeeDepartment']));
             break;
         case 'start_date':
             $pdf->Write(0, convertThai(thaiDate($leaveData['StartDate'])));
@@ -147,23 +111,20 @@ foreach ($fields as $field => $coordinates) {
         case 'end_date':
             $pdf->Write(0, convertThai(thaiDate($leaveData['EndDate'])));
             break;
-        case 'reason':
-        case 'contact':
-            $pdf->Write(0, convertThai($leaveData['Remarks']));
+        case 'leave_type':
+            $pdf->Write(0, convertThai($leaveData['LeaveType']));
             break;
-        // Add more fields as needed
+        case 'employee_tel':
+            $pdf->Write(0, convertThai($leaveData['EmployeeTel']));
+            break;
     }
 }
 
-// Handle checkboxes for specific leave types
-if ($leaveType === 'ลาป่วย' || $leaveType === 'ลากิจส่วนตัว' || $leaveType === 'การลาคลอดบุตร') {
-    $pdf->SetFont('ZapfDingbats', '', 14);
-    $checkboxX = 40;
-    $checkboxY = $leaveType === 'ลาป่วย' ? 50 : ($leaveType === 'ลากิจส่วนตัว' ? 55 : 60);
-    $pdf->SetXY($checkboxX, $checkboxY);
-    $pdf->Write(0, '4'); // Checkmark character
+// ฟังก์ชันแปลงข้อความเป็นภาษาไทย
+function convertThai($text) {
+    return iconv("UTF-8", "Windows-874//IGNORE", $text);
 }
 
-// Output the PDF
+// ส่งออก PDF
 $pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>
