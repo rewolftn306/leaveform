@@ -17,7 +17,7 @@ $applicationId = $_GET['id'];
 include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
-$stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type 
+$stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, la.CreateDate
                         FROM leaveapplications la 
                         JOIN users u ON la.EmployeeID = u.UserID 
                         LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID 
@@ -82,12 +82,36 @@ function convertThai($text) {
     return iconv("UTF-8", "Windows-874//IGNORE", $text);
 }
 
+function convertToThaiDate($date) {
+    // อาเรย์ของชื่อเดือนในภาษาไทย
+    $thaiMonths = [
+        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน',
+        5 => 'พฤษภาคม', 6 => 'มิถุนายน', 7 => 'กรกฎาคม', 8 => 'สิงหาคม',
+        9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม'
+    ];
+
+    // แปลงวันที่ให้เป็น Timestamp (Unix Timestamp)
+    $timestamp = strtotime($date);
+    
+    // ดึงวัน, เดือน, ปี
+    $day = date('d', $timestamp);
+    $month = date('n', $timestamp); // ใช้ 'n' เพื่อดึงเดือนแบบตัวเลข (1-12)
+    $year = date('Y', $timestamp) + 543; // เพิ่ม 543 ปีให้เป็นปีพุทธศักราช
+
+    // สร้างวันที่ในรูปแบบภาษาไทย โดยเพิ่มช่องว่างระหว่างวัน, เดือน, และปี
+    return $day . '             ' . $thaiMonths[$month] . '           ' . $year;
+}
+
 // Insert data based on the template
 switch ($leaveType) {
     case 'ลาป่วย':
     case 'ลากิจส่วนตัว':
     case 'การลาคลอดบุตร':
-        $pdf->SetXY(50, 56);
+        // แปลงวันที่เป็นภาษาไทย
+        $formattedDate = convertToThaiDate($leaveData['CreateDate']);
+        $pdf->SetXY(130, 33.5); // ปรับตำแหน่งตามที่เหมาะสม
+        $pdf->Write(0, convertThai('' . $formattedDate));
+        $pdf->SetXY(56, 57);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->SetXY(50, 69);
         $pdf->Write(0, convertThai($leaveType)); // เช่น ลาป่วย, ลากิจส่วนตัว
