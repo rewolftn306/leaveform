@@ -41,7 +41,14 @@ switch ($leaveType) {
     case 'ลาป่วย':
     case 'ลากิจส่วนตัว':
     case 'การลาคลอดบุตร':
+    case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
+    case 'ลาดูแลบิดาหรือมารดา':
+    case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
         $templatePath = 'form/Form-ใบลาป่วย-ลากิจส่วนตัว-ลาคลอดบุตร_2568-2.pdf';
+        break;
+    case 'ลาบวช/ประกอบพิธีฮัจย์':
+    case 'ลาไปถือศีลและปฏิบัติธรรม':
+        $templatePath = 'form/ใบลาอุปสมบท.pdf';
         break;
     case 'ลาพักผ่อน':
         $templatePath = 'form/Form-ใบลาพักผ่อน_2568-2.pdf';
@@ -51,6 +58,9 @@ switch ($leaveType) {
         break;
     case 'ลาพักผ่อนไปต่างประเทศ':
         $templatePath = 'form/Form-ใบลาพักผ่อนไปต่างประเทศ.pdf';
+        break;
+    case 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร':
+        $templatePath = 'form/ใบลาดูแลบุตรและภรรยาหลังคลอด.pdf';
         break;
     default:
         $templatePath = 'form/default_template.pdf';
