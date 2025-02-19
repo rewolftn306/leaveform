@@ -255,4 +255,3 @@ switch ($leaveType) {
 // Output PDF to browser
 $pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>
-
