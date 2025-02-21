@@ -28,9 +28,9 @@ $email = isset($_POST['email']) ? (filter_var($_POST['email'], FILTER_VALIDATE_E
 $role = sanitize_input($_POST['role']);
 
 // รับข้อมูลเพิ่มเติมสำหรับ Employee (ถ้ามี)
-$position = isset($_POST['position']) ? sanitize_input($_POST['position']) : 'Unknown';
-$department = isset($_POST['department']) ? sanitize_input($_POST['department']) : 'Unknown';
-$tel = isset($_POST['tel']) ? sanitize_input($_POST['tel']) : 'Unknown';
+$position = isset($_POST['position']) ? sanitize_input($_POST['position']) : '';
+$department = isset($_POST['department']) ? sanitize_input($_POST['department']) : '';
+$tel = isset($_POST['tel']) ? sanitize_input($_POST['tel']) : '';
 
 // ตรวจสอบข้อมูลที่จำเป็น
 if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($role)) {

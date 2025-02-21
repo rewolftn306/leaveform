@@ -34,9 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
     $lastname = trim($_POST['lastname']);
     $email = trim($_POST['email']);
     $role = trim($_POST['role']);
-    $position = isset($_POST['position']) ? trim($_POST['position']) : 'Unknown';
-    $department = isset($_POST['department']) ? trim($_POST['department']) : 'Unknown';
-    $tel = isset($_POST['tel']) ? trim($_POST['tel']) : 'Unknown';
+    $position = isset($_POST['position']) ? trim($_POST['position']) : '';
+    $department = isset($_POST['department']) ? trim($_POST['department']) : '';
+    $tel = isset($_POST['tel']) ? trim($_POST['tel']) : '';
 
     // ตรวจสอบข้อมูลที่จำเป็น
     if (empty($username) || empty($password) || empty($firstname) || empty($lastname) || empty($role)) {

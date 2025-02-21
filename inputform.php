@@ -132,32 +132,49 @@ if (isset($_GET['success'])) {
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
         function fetchConditions(leaveTypeID) {
+            const conditionsDiv = document.getElementById('leave_conditions');
             if (leaveTypeID === "") {
-                document.getElementById('leave_conditions').innerHTML = "";
+                conditionsDiv.innerHTML = "";
                 return;
             }
-            fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-                        return;
-                    }
-                    if (data.length === 0) {
-                        document.getElementById('leave_conditions').innerHTML = "<p>ไม่มีเงื่อนไขการลาในประเภทนี้</p>";
-                        return;
-                    }
-                    let html = "<h5>เงื่อนไขการลา:</h5><ul>";
-                    data.forEach(condition => {
-                        html += `<li>${condition}</li>`;
-                    });
-                    html += "</ul>";
-                    document.getElementById('leave_conditions').innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูลเงื่อนไขการลา</div>`;
-                });
+
+            let html = "";
+
+            // เพิ่มฟิลด์ตามประเภทการลา
+            if (leaveTypeID == 4) { // ลาบวช/ประกอบพิธีฮัจย์
+                html += `
+                    <div class="mb-3">
+                        <label for="ordination_experience" class="form-label">เคยอุปสมบท:</label>
+                        <select id="ordination_experience" name="ordination_experience" class="form-select" required onchange="toggleOrdinationDetails(this.value)">
+                            <option value="">-- เลือก --</option>
+                            <option value="yes">เคยอุปสมบท</option>
+                            <option value="no">ไม่เคยอุปสมบท</option>
+                        </select>
+                    </div>
+                    <div id="ordination_details" class="mb-3" style="display: none;">
+                        <label for="temple_name" class="form-label">ชื่อวัด:</label>
+                        <input type="text" id="temple_name" name="temple_name" class="form-control" placeholder="ชื่อวัดที่อุปสมบท">
+                    </div>
+                    <div id="ordination_details" class="mb-3" style="display: none;">
+                        <label for="temple_location" class="form-label">ตั้งอยู่ ณ:</label>
+                        <input type="text" id="temple_location" name="temple_location" class="form-control" placeholder="ที่ตั้งของวัด">
+                    </div>
+                    <div id="ordination_details" class="mb-3" style="display: none;">
+                        <label for="ordination_dates" class="form-label">วันที่จำพรรษา:</label>
+                        <input type="text" id="ordination_dates" name="ordination_dates" class="form-control" placeholder="ระบุวันที่และระยะเวลาจำพรรษา">
+                    </div>`;
+            }
+
+            conditionsDiv.innerHTML = html;
+        }
+
+        function toggleOrdinationDetails(value) {
+            const details = document.getElementById('ordination_details');
+            if (value === 'yes') {
+                details.style.display = 'block';
+            } else {
+                details.style.display = 'none';
+            }
         }
     </script>
 </body>

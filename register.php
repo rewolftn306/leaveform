@@ -64,7 +64,7 @@ if (empty($_SESSION['csrf_token'])) {
                     <label for="email" class="form-label">อีเมล์</label>
                     <input type="email" id="email" name="email" class="form-control">
                 </div>
-                
+
                 <div class="mb-3">
                     <label for="role" class="form-label">บทบาท</label>
                     <select id="role" name="role" class="form-select" required>
@@ -72,7 +72,20 @@ if (empty($_SESSION['csrf_token'])) {
                         <option value="Employee">พนักงาน (Employee)</option>
                         <!-- คุณสามารถเพิ่มบทบาทอื่นๆ ได้ที่นี่ -->
                     </select>
-                </div>
+                </div> 
+                
+                <div class="mb-3">
+                        <label for="position" class="form-label">ตำแหน่ง</label>
+                        <input type="text" id="position" name="position" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="department" class="form-label">แผนก</label>
+                        <input type="text" id="department" name="department" class="form-control">
+                    </div>
+                    <div class="mb-3">
+                        <label for="tel" class="form-label">โทรศัพท์</label>
+                        <input type="text" id="tel" name="tel" class="form-control">
+                    </div>
                 
                 <div class="mb-3">
                     <label for="profile_picture" class="form-label">โปรไฟล์รูปภาพ</label>

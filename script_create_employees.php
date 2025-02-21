@@ -3,7 +3,7 @@
 include('connect.php');
 
 // ดึง UserID ของผู้ใช้ที่มีบทบาท Employee แต่ไม่มีรายการในตาราง employees
-$sql = "SELECT UserID, FirstName, LastName, Email, profile_picture 
+$sql = "SELECT UserID, FirstName, LastName, Email, profile_picture, Position, Department, Tel
         FROM users 
         WHERE Role = 'Employee' AND UserID NOT IN (SELECT EmployeeID FROM employees)";
 
@@ -19,13 +19,13 @@ if ($result) {
             $lastName = $row['LastName'];
             $email = $row['Email'];
             $profile_picture = $row['profile_picture'];
+            $position = $row['Position']; // รับค่าตำแหน่งจากตาราง users
+            $department = $row['Department']; // รับค่าแผนกจากตาราง users
+            $tel = $row['Tel']; // รับค่าเบอร์โทรศัพท์จากตาราง users
 
             // กำหนดค่าเริ่มต้นสำหรับฟิลด์อื่นๆ
-            $position = 'Unknown';
-            $department = 'Unknown';
-            $tel = 'Unknown';
             $full_name = $firstName . ' ' . $lastName;
-            $role_employee = 'Employee';
+            $role_employee = 'Employee';  // ระบุบทบาทเป็น Employee
 
             // แทรกข้อมูลในตาราง employees
             $stmt = $conn->prepare("INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role) 
