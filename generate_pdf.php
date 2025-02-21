@@ -239,15 +239,23 @@ switch ($leaveType) {
         break;
 
     case 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร':
+
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(50, 40);
+        $formattedDate = convertToThaiDate($leaveData['CreateDate']);
+        $pdf->SetXY(122, 34);
+        $pdf->Write(0, convertThai('' . $formattedDate));
+        $pdf->SetXY(60, 73);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
-        $pdf->SetXY(50, 47);
+        $pdf->SetXY(160, 70);
         $pdf->Write(0, convertThai($leaveData['Position']));
-        $pdf->SetXY(50, 61);
+        $pdf->SetXY(100,84);
         $pdf->Write(0, convertThai($leaveData['StartDate']));
-        $pdf->SetXY(120, 61);
+        $pdf->SetXY(145, 83);
         $pdf->Write(0, convertThai($leaveData['EndDate']));
+        $pdf->SetXY(130, 96);
+        $pdf->Write(0, convertThai('' . $leaveData['Tel']));
+        $pdf->SetXY(40, 79.5);
+        $pdf->Write(0, convertThai('' . $leaveData['Department']));
         break;
 }
 
