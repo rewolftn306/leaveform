@@ -101,13 +101,29 @@ if (isset($_GET['success'])) {
                     <select id="leave_type" name="leave_type" class="form-select" required onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
-                            <option value="<?= intval($type['LeaveTypeID']); ?>"><?= htmlspecialchars($type['LeaveName']); ?></option>
+                            <option value="<?= intval($type['LeaveTypeID']); ?>" <?= $type['LeaveName'] == 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร' ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($type['LeaveName']); ?>
+                            </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div id="leave_conditions" class="mb-3">
                     <!-- แสดงเงื่อนไขการลา -->
                 </div>
+
+                <!-- ตัวเลือกสำหรับกรอกข้อมูล -->
+                <div id="additional_options" class="mb-3" style="display: none;">
+                    <label class="form-label">กรุณาเลือกตัวเลือก:</label><br>
+                    <input type="radio" id="attachDocuments" name="document_option" value="attach" onchange="toggleFileInput(true)"> แนบสำเนาสูติบัตรและทะเบียนสมรส
+                    <input type="radio" id="sendDocuments" name="document_option" value="send" onchange="toggleFileInput(false)"> ขอจัดส่งในวันแรกที่ข้าพกลับมา
+                </div>
+
+                <!-- ช่องสำหรับแนบไฟล์เมื่อเลือก "แนบเอกสาร" -->
+                <div id="fileInputSection" class="mb-3" style="display: none;">
+                    <label for="documents" class="form-label">แนบไฟล์:</label>
+                    <input type="file" id="documents" name="documents" class="form-control">
+                </div>
+
                 <div class="mb-3">
                     <label for="start_date" class="form-label">วันที่เริ่มลา:</label>
                     <input type="date" id="start_date" name="start_date" class="form-control" required>
@@ -117,9 +133,11 @@ if (isset($_GET['success'])) {
                     <input type="date" id="end_date" name="end_date" class="form-control" required>
                 </div>
                 <div class="mb-3">
-                    <label for="remarks" class="form-label">หมายเหตุ:</label>
-                    <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา" required></textarea>
+                    <label for="remarks" class="form-label">เหตุผลการลา:</label>
+                     <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา" maxlength="45" required></textarea>
                 </div>
+
+
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                 <button type="submit" class="btn btn-primary w-100">ส่งข้อมูล</button>
@@ -131,51 +149,56 @@ if (isset($_GET['success'])) {
     <!-- Bootstrap JS และ JavaScript สำหรับแสดงเงื่อนไขการลา -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
-            const conditionsDiv = document.getElementById('leave_conditions');
+            const additionalOptionsSection = document.getElementById('additional_options');
+            
+            // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
+            if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
+                additionalOptionsSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
+            } else {
+                additionalOptionsSection.style.display = 'none'; // ซ่อนตัวเลือก
+            }
+
+            // เรียก fetchConditions() เพื่อนำข้อมูลเงื่อนไขการลา
             if (leaveTypeID === "") {
-                conditionsDiv.innerHTML = "";
+                document.getElementById('leave_conditions').innerHTML = "";
                 return;
             }
-
-            let html = "";
-
-            // เพิ่มฟิลด์ตามประเภทการลา
-            if (leaveTypeID == 4) { // ลาบวช/ประกอบพิธีฮัจย์
-                html += `
-                    <div class="mb-3">
-                        <label for="ordination_experience" class="form-label">เคยอุปสมบท:</label>
-                        <select id="ordination_experience" name="ordination_experience" class="form-select" required onchange="toggleOrdinationDetails(this.value)">
-                            <option value="">-- เลือก --</option>
-                            <option value="yes">เคยอุปสมบท</option>
-                            <option value="no">ไม่เคยอุปสมบท</option>
-                        </select>
-                    </div>
-                    <div id="ordination_details" class="mb-3" style="display: none;">
-                        <label for="temple_name" class="form-label">ชื่อวัด:</label>
-                        <input type="text" id="temple_name" name="temple_name" class="form-control" placeholder="ชื่อวัดที่อุปสมบท">
-                    </div>
-                    <div id="ordination_details" class="mb-3" style="display: none;">
-                        <label for="temple_location" class="form-label">ตั้งอยู่ ณ:</label>
-                        <input type="text" id="temple_location" name="temple_location" class="form-control" placeholder="ที่ตั้งของวัด">
-                    </div>
-                    <div id="ordination_details" class="mb-3" style="display: none;">
-                        <label for="ordination_dates" class="form-label">วันที่จำพรรษา:</label>
-                        <input type="text" id="ordination_dates" name="ordination_dates" class="form-control" placeholder="ระบุวันที่และระยะเวลาจำพรรษา">
-                    </div>`;
-            }
-
-            conditionsDiv.innerHTML = html;
+            fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.error) {
+                        document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                        return;
+                    }
+                    if (data.length === 0) {
+                        document.getElementById('leave_conditions').innerHTML = "<p>ไม่มีเงื่อนไขการลาในประเภทนี้</p>";
+                        return;
+                    }
+                    let html = "<h5>เงื่อนไขการลา:</h5><ul>";
+                    data.forEach(condition => {
+                        html += `<li>${condition}</li>`;
+                    });
+                    html += "</ul>";
+                    document.getElementById('leave_conditions').innerHTML = html;
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูลเงื่อนไขการลา</div>`;
+                });
         }
 
-        function toggleOrdinationDetails(value) {
-            const details = document.getElementById('ordination_details');
-            if (value === 'yes') {
-                details.style.display = 'block';
+        // ฟังก์ชันสำหรับการแสดง/ซ่อนช่องกรอกไฟล์
+        function toggleFileInput(shouldShow) {
+            const fileInputSection = document.getElementById('fileInputSection');
+            if (shouldShow) {
+                fileInputSection.style.display = 'block';  // แสดงช่องกรอกไฟล์
             } else {
-                details.style.display = 'none';
+                fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
             }
         }
     </script>
 </body>
 </html>
+ 

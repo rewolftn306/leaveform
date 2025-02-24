@@ -31,6 +31,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $startDate = $_POST['start_date'];
     $endDate = $_POST['end_date'];
     $remarks = sanitize_input($_POST['remarks']);
+    $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;  // ตัวเลือกการแนบไฟล์หรือขอจัดส่ง
 
     // รับ EmployeeID จาก Session
     $employeeID = intval($_SESSION['UserID']);
@@ -74,49 +75,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
     $stmt->close();
 
-    // ดึงเงื่อนไขการลาตามประเภทการลา
-    $stmt_cond = $conn->prepare("SELECT ConditionDescription FROM leaveconditions WHERE LeaveTypeID = ?");
-    $stmt_cond->bind_param("i", $leaveTypeID);
-    $stmt_cond->execute();
-    $result_cond = $stmt_cond->get_result();
-    $conditions = [];
-    if ($result_cond) {
-        while ($row = $result_cond->fetch_assoc()) {
-            $conditions[] = $row['ConditionDescription'];
+    // ตรวจสอบว่ามีการเลือกตัวเลือก "แนบไฟล์" หรือ "ขอจัดส่ง"
+    $documentFilePath = null;
+    if ($documentOption === 'attach' && isset($_FILES['documents']) && $_FILES['documents']['error'] === UPLOAD_ERR_OK) {
+        // อัปโหลดไฟล์ PDF และเก็บในโฟลเดอร์
+        $uploadDir = 'uploads/';
+        $filePath = $uploadDir . basename($_FILES['documents']['name']);
+        if (move_uploaded_file($_FILES['documents']['tmp_name'], $filePath)) {
+            $documentFilePath = $filePath;  // เก็บเส้นทางไฟล์
+        } else {
+            header("Location: inputform.php?error=ไม่สามารถอัปโหลดไฟล์ได้");
+            exit();
         }
-    }
-    $stmt_cond->close();
-
-    // ตัวอย่างการตรวจสอบเงื่อนไขการลา (ปรับให้เหมาะสม)
-    foreach ($conditions as $condition) {
-        // ตรวจสอบการไม่เกินจำนวนวันลา
-        if (strpos($condition, 'ไม่เกิน') !== false) {
-            preg_match('/ไม่เกิน (\d+) วัน/', $condition, $matches);
-            if (isset($matches[1])) {
-                $max_days = intval($matches[1]);
-                $start = new DateTime($startDate);
-                $end = new DateTime($endDate);
-                $interval = $start->diff($end);
-                $days = $interval->days + 1; // รวมวันเริ่มต้น
-                if ($days > $max_days) {
-                    header("Location: inputform.php?error=จำนวนวันลามากกว่าที่กำหนดสำหรับประเภทการลานี้");
-                    exit();
-                }
-            }
-        }
-
-        // คุณสามารถเพิ่มการตรวจสอบเงื่อนไขอื่นๆ ตามที่ต้องการได้ที่นี่
     }
 
     // แทรกข้อมูลการลา
-    $sql = "INSERT INTO leaveapplications (EmployeeID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks) VALUES (?, ?, ?, ?, 'Pending', ?)";
+    $sql = "INSERT INTO leaveapplications (EmployeeID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         error_log("Prepare failed: " . $conn->error);
         header("Location: inputform.php?error=เกิดข้อผิดพลาดในการส่งคำขอการลา");
         exit();
     }
-    $stmt->bind_param("iisss", $employeeID, $leaveTypeID, $startDate, $endDate, $remarks);
+
+    $stmt->bind_param("iisssss", $employeeID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
 
     if ($stmt->execute()) {
         header("Location: inputform.php?success=ส่งคำขอการลาเรียบร้อยแล้ว");
