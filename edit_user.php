@@ -172,6 +172,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
 ?>
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <title>แก้ไขข้อมูลผู้ใช้งาน</title>
@@ -181,14 +182,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
             background-color: #f4f4f9;
             padding-top: 70px;
         }
+
         .form-container {
             background: #ffffff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             max-width: 600px;
             margin: auto;
         }
+
         .btn-back {
             background-color: #dc3545;
             color: white;
@@ -198,14 +201,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
             margin-top: 10px;
             display: inline-block;
         }
+
         .btn-back:hover {
             background-color: #c82333;
         }
+
         .current-profile {
             margin-top: 10px;
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -233,7 +239,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
             <form method="POST" enctype="multipart/form-data" novalidate>
                 <div class="mb-3">
                     <label for="username" class="form-label">ชื่อผู้ใช้:</label>
-                    <input type="text" id="username" name="username" class="form-control" value="<?= htmlspecialchars($user['Username']); ?>" disabled>
+                    <input type="text" id="username" name="username" class="form-control"
+                        value="<?= htmlspecialchars($user['Username']); ?>" disabled>
                 </div>
                 <div class="mb-3">
                     <label for="password" class="form-label">รหัสผ่าน (เปลี่ยนรหัสผ่านใหม่):</label>
@@ -242,30 +249,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                 </div>
                 <div class="mb-3">
                     <label for="firstname" class="form-label">ชื่อ:</label>
-                    <input type="text" id="firstname" name="firstname" class="form-control" value="<?= htmlspecialchars($user['FirstName']); ?>" required>
+                    <input type="text" id="firstname" name="firstname" class="form-control"
+                        value="<?= htmlspecialchars($user['FirstName']); ?>" required>
                 </div>
                 <div class="mb-3">
                     <label for="lastname" class="form-label">นามสกุล:</label>
-                    <input type="text" id="lastname" name="lastname" class="form-control" value="<?= htmlspecialchars($user['LastName']); ?>" required>
+                    <input type="text" id="lastname" name="lastname" class="form-control"
+                        value="<?= htmlspecialchars($user['LastName']); ?>" required>
                 </div>
                 <div class="mb-3">
                     <label for="email" class="form-label">อีเมล์:</label>
-                    <input type="email" id="email" name="email" class="form-control" value="<?= htmlspecialchars($user['Email']); ?>" required>
+                    <input type="email" id="email" name="email" class="form-control"
+                        value="<?= htmlspecialchars($user['Email']); ?>" required>
                 </div>
                 <div class="mb-3">
                     <label for="role" class="form-label">ตำแหน่ง:</label>
                     <select id="role" name="role" class="form-select" required>
                         <option value="">-- เลือกตำแหน่ง --</option>
-                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>อธิบดี (Director)</option>
-                        <option value="Admin" <?= ($user['Role'] === 'Admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ (Admin)</option>
+                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>หัวหน้า
+                            (Director)</option>
+                        <option value="Admin" <?= ($user['Role'] === 'Admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ (Admin)
+                        </option>
                     </select>
                 </div>
                 <div class="mb-3">
                     <label for="profile_picture" class="form-label">โปรไฟล์:</label>
-                    <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*">
+                    <input type="file" id="profile_picture" name="profile_picture" class="form-control"
+                        accept="image/*">
                     <?php if (!empty($user['profile_picture'])): ?>
                         <div class="current-profile">
-                            <img src="<?= htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture" class="img-thumbnail mt-2" width="150">
+                            <img src="<?= htmlspecialchars($user['profile_picture']); ?>" alt="Profile Picture"
+                                class="img-thumbnail mt-2" width="150">
                         </div>
                     <?php endif; ?>
                 </div>
@@ -280,4 +294,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 </body>
+
 </html>

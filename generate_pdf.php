@@ -91,21 +91,32 @@ try {
 $pdf->SetTextColor(0, 0, 0);
 
 // Function to handle Thai encoding
-function convertThai($text) {
+function convertThai($text)
+{
     return iconv("UTF-8", "Windows-874//IGNORE", $text);
 }
 
-function convertToThaiDate($date, $isCreateDate = false) {
+function convertToThaiDate($date, $isCreateDate = false)
+{
     // อาเรย์ของชื่อเดือนในภาษาไทย
     $thaiMonths = [
-        1 => 'มกราคม', 2 => 'กุมภาพันธ์', 3 => 'มีนาคม', 4 => 'เมษายน',
-        5 => 'พฤษภาคม', 6 => 'มิถุนายน', 7 => 'กรกฎาคม', 8 => 'สิงหาคม',
-        9 => 'กันยายน', 10 => 'ตุลาคม', 11 => 'พฤศจิกายน', 12 => 'ธันวาคม'
+        1 => 'มกราคม',
+        2 => 'กุมภาพันธ์',
+        3 => 'มีนาคม',
+        4 => 'เมษายน',
+        5 => 'พฤษภาคม',
+        6 => 'มิถุนายน',
+        7 => 'กรกฎาคม',
+        8 => 'สิงหาคม',
+        9 => 'กันยายน',
+        10 => 'ตุลาคม',
+        11 => 'พฤศจิกายน',
+        12 => 'ธันวาคม'
     ];
 
     // แปลงวันที่ให้เป็น Timestamp (Unix Timestamp)
     $timestamp = strtotime($date);
-    
+
     // ดึงวัน, เดือน, ปี
     $day = date('d', $timestamp);
     $month = date('n', $timestamp); // ใช้ 'n' เพื่อดึงเดือนแบบตัวเลข (1-12)
@@ -120,7 +131,8 @@ function convertToThaiDate($date, $isCreateDate = false) {
     }
 }
 
-function drawTick($pdf, $x, $y, $isChecked) {
+function drawTick($pdf, $x, $y, $isChecked)
+{
     if ($isChecked) {
         // วาดเครื่องหมายติ๊กถูก
         $pdf->SetLineWidth(0.4); // กำหนดความหนาของเส้น
@@ -129,11 +141,12 @@ function drawTick($pdf, $x, $y, $isChecked) {
     }
 }
 
-function calculateLeaveDays($startDate, $endDate) {
+function calculateLeaveDays($startDate, $endDate)
+{
     // แปลงวันที่ให้เป็น Timestamp (Unix Timestamp)
     $startTimestamp = strtotime($startDate);
     $endTimestamp = strtotime($endDate);
-    
+
     // คำนวณจำนวนวัน
     $diffInDays = ($endTimestamp - $startTimestamp) / (60 * 60 * 24) + 0; // บวก 1 เพื่อรวมวันสุดท้าย
 
@@ -176,7 +189,7 @@ switch ($leaveType) {
                 $pdf->SetXY(88, 69.5);  // ปรับตำแหน่งของหมายเหตุในช่อง "ลาป่วย"
                 $pdf->Write(0, convertThai('' . $remarksText));
                 break;
-            
+
             case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
             case 'ลากิจส่วนตัว':
             case 'ลาดูแลบิดาหรือมารดา':
@@ -185,16 +198,16 @@ switch ($leaveType) {
                 drawTick($pdf, 56, 74.5, true); // ตำแหน่งของ "ลากิจส่วนตัว" checkbox
                 drawTick($pdf, 69.5, 93.5, true);
                 $remarksText = $leaveData['Remarks'] ? $leaveData['Remarks'] : '';
-                $pdf->SetXY(97,76);  // ปรับตำแหน่งของหมายเหตุในช่อง "ลากิจส่วนตัว"
+                $pdf->SetXY(97, 76);  // ปรับตำแหน่งของหมายเหตุในช่อง "ลากิจส่วนตัว"
                 $pdf->Write(0, convertThai('' . $remarksText));
                 break;
-        
+
             case 'การลาคลอดบุตร':
                 // ติ๊กที่ช่อง "การลาคลอดบุตร" (ถ้ามี)
                 drawTick($pdf, 56, 81, true); // ตำแหน่งของ "การลาคลอดบุตร" checkbox
                 drawTick($pdf, 95.5, 93.5, true);
                 break;
-        
+
         }
         $pdf->SetXY(61, 39.75);
         $pdf->Write(0, convertThai($leaveType)); // เช่น ลาป่วย, ลากิจส่วนตัว
@@ -247,7 +260,7 @@ switch ($leaveType) {
         $pdf->SetXY(148, 94);
         $pdf->Write(0, convertThai('' . $leaveData['Tel']));
         break;
-    
+
     case 'ขอยกเลิกวันลา':
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $pdf->SetXY(50, 50);
@@ -259,7 +272,7 @@ switch ($leaveType) {
         $pdf->SetXY(120, 71);
         $pdf->Write(0, convertThai($leaveData['EndDate']));
         break;
-    
+
     case 'ลาพักผ่อนไปต่างประเทศ':
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);

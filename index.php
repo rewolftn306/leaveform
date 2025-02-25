@@ -40,13 +40,15 @@ if ($result->num_rows > 0) {
 $stmt->close();
 
 // คำสั่ง SQL สำหรับดึงข้อมูลการลา
-if ($role === 'Admin') {
+if ($role === 'Admin' || $role === 'Director') {
     $sql = "SELECT u.UserID, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
             la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
             FROM users u
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE la.LeaveTypeID IS NOT NULL";
+    $stmt = $conn->prepare($sql);
+    $stmt->execute();
 } else {
     $sql = "SELECT u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
             la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
@@ -54,13 +56,11 @@ if ($role === 'Admin') {
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("s", $user_name);
+    $stmt->execute();
 }
 
-$stmt = $conn->prepare($sql);
-if ($role !== 'Admin') {
-    $stmt->bind_param("s", $user_name);
-}
-$stmt->execute();
 $result = $stmt->get_result();
 
 $tableData = [];
@@ -111,7 +111,7 @@ if ($result) {
 $conn->close();
 
 // แปลงข้อมูลกราฟให้เป็น JSON
-$chartLabels = json_encode(array_map(function($leave) {
+$chartLabels = json_encode(array_map(function ($leave) {
     return $leave;
 }, array_values($leaveTypes)));
 $chartValues = json_encode(array_values($chartData));
@@ -119,6 +119,7 @@ $chartValues = json_encode(array_values($chartData));
 
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -130,9 +131,11 @@ $chartValues = json_encode(array_values($chartData));
             background: #f9f9f9;
             padding-top: 70px;
         }
+
         .navbar {
             margin-bottom: 20px;
         }
+
         .profile-section {
             display: flex;
             flex-wrap: wrap;
@@ -141,48 +144,59 @@ $chartValues = json_encode(array_values($chartData));
             padding: 25px 0;
             border-bottom: 1px solid #ddd;
         }
+
         .profile-details {
             display: flex;
             align-items: center;
         }
+
         .profile-details img {
             border-radius: 50%;
             width: 100px;
             height: 100px;
             margin-right: 20px;
         }
+
         .profile-details h4 {
             margin: 0;
             font-size: 18px;
             color: #333;
         }
+
         .profile-details p {
             margin: 5px 0 0 0;
             font-size: 18px;
             color: #666;
         }
+
         .buttons a {
             margin: 5px 0;
         }
+
         .chart-container {
             width: 100%;
             max-width: 500px;
             margin: 20px auto;
         }
+
         #leaveChart {
             width: 100% !important;
             height: 250px !important;
         }
+
         .table-container {
             margin-top: 20px;
             width: 100%;
             overflow-x: auto;
         }
-        table th, table td {
+
+        table th,
+        table td {
             text-align: center;
         }
     </style>
 </head>
+
 <body>
 
     <!-- Navigation Bar -->
@@ -208,30 +222,32 @@ $chartValues = json_encode(array_values($chartData));
                 <?php else: ?>
                     <img src="default_profile_picture.jpg" alt="Default Profile Picture">
                 <?php endif; ?>
-                
+
                 <div>
                     <h4>ชื่อ: <?= $firstname . ' ' . $lastname; ?></h4>
-                    <p>ตำแหน่ง: 
-                        <?php 
-                            switch ($role) {
-                                case 'Employee':
-                                    echo 'พนักงาน';
-                                    break;
-                                case 'Director':
-                                    echo 'อธิบดี';
-                                    break;
-                                case 'Admin':
-                                    echo 'ผู้ดูแลระบบ';
-                                    break;
-                                default:
-                                    echo 'ไม่ระบุ';
-                            }
+                    <p>ตำแหน่ง:
+                        <?php
+                        switch ($role) {
+                            case 'Employee':
+                                echo 'พนักงาน';
+                                break;
+                            case 'Director':
+                                echo 'หัวหน้า';
+                                break;
+                            case 'Admin':
+                                echo 'ผู้ดูแลระบบ';
+                                break;
+                            default:
+                                echo 'ไม่ระบุ';
+                        }
                         ?>
                     </p>
                 </div>
             </div>
             <div class="buttons">
-                <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
+                <?php if ($role === 'Employee'): ?>
+                    <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
+                <?php endif; ?>
                 <?php if ($role === 'Director' || $role === 'Admin'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
                 <?php endif; ?>
@@ -252,7 +268,15 @@ $chartValues = json_encode(array_values($chartData));
 
         <!-- Table Section -->
         <div class="table-container">
-            <h3 class="text-center">ตารางสรุปการลางาน</h3>
+            <h3 class="text-center">
+                <?php
+                if ($role === 'Admin' || $role === 'Director') {
+                    echo 'ตารางสรุปการลางานของลูกจ้าง';
+                } else {
+                    echo 'ตารางสรุปการลางาน';
+                }
+                ?>
+            </h3>
             <table class="table table-bordered table-striped">
                 <thead class="table-dark">
                     <tr>
@@ -277,19 +301,17 @@ $chartValues = json_encode(array_values($chartData));
                                 <td><?= $row['approval_status']; ?></td>
                                 <td><?= $row['leave_days']; ?> วัน</td>
                                 <td>
-                                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal" 
-                                            data-name="<?= $row['name']; ?>" 
-                                            data-start="<?= $row['start_date']; ?>" 
-                                            data-end="<?= $row['end_date']; ?>" 
-                                            data-leave-type="<?= $row['leave_type']; ?>" 
-                                            data-status="<?= $row['approval_status']; ?>" 
-                                            data-remarks="<?= $row['remarks']; ?>" 
-                                            data-application-id="<?= $row['application_id']; ?>">
+                                    <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal"
+                                        data-name="<?= $row['name']; ?>" data-start="<?= $row['start_date']; ?>"
+                                        data-end="<?= $row['end_date']; ?>" data-leave-type="<?= $row['leave_type']; ?>"
+                                        data-status="<?= $row['approval_status']; ?>" data-remarks="<?= $row['remarks']; ?>"
+                                        data-application-id="<?= $row['application_id']; ?>">
                                         ดูรายละเอียด
                                     </button>
                                 </td>
                                 <td>
-                                    <a href="generate_pdf.php?id=<?= $row['application_id']; ?>" class="btn btn-primary">พิมพ์ PDF</a>
+                                    <a href="generate_pdf.php?id=<?= $row['application_id']; ?>" class="btn btn-primary">พิมพ์
+                                        PDF</a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>
@@ -305,7 +327,8 @@ $chartValues = json_encode(array_values($chartData));
     </div>
 
     <!-- Modal for detailed leave info -->
-    <div class="modal fade" id="leaveDetailModal" tabindex="-1" aria-labelledby="leaveDetailModalLabel" aria-hidden="true">
+    <div class="modal fade" id="leaveDetailModal" tabindex="-1" aria-labelledby="leaveDetailModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -314,14 +337,16 @@ $chartValues = json_encode(array_values($chartData));
                 </div>
                 <div class="modal-body">
                     <p><strong>ประเภทการลา:</strong> <span id="modal-leave-type"></span></p>
-                    <p><strong>วันที่ลา:</strong> <span id="modal-start-date"></span> ถึง <span id="modal-end-date"></span></p>
+                    <p><strong>วันที่ลา:</strong> <span id="modal-start-date"></span> ถึง <span
+                            id="modal-end-date"></span></p>
                     <p><strong>สถานะ:</strong> <span id="modal-status"></span></p>
                     <p><strong>หมายเหตุ:</strong> <span id="modal-remarks"></span></p>
                 </div>
                 <div class="modal-footer">
-                     <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
-                     <button type="button" class="btn btn-primary" id="printDocumentButton">พิมพ์ PDF</button>
-                     <button type="button" class="btn btn-danger" id="cancelLeaveButton" style="display: none;">ยกเลิกการลา</button>
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">ปิด</button>
+                    <button type="button" class="btn btn-primary" id="printDocumentButton">พิมพ์ PDF</button>
+                    <button type="button" class="btn btn-danger" id="cancelLeaveButton"
+                        style="display: none;">ยกเลิกการลา</button>
                 </div>
             </div>
         </div>
@@ -361,7 +386,7 @@ $chartValues = json_encode(array_values($chartData));
                     },
                     tooltip: {
                         callbacks: {
-                            label: function(context) {
+                            label: function (context) {
                                 return context.parsed.y + ' วัน'; // แสดงจำนวนวันลา
                             }
                         }
@@ -371,63 +396,64 @@ $chartValues = json_encode(array_values($chartData));
         });
     </script>
     <script>
-    document.addEventListener("DOMContentLoaded", function() {
-        var leaveDetailModal = document.getElementById('leaveDetailModal');
+        document.addEventListener("DOMContentLoaded", function () {
+            var leaveDetailModal = document.getElementById('leaveDetailModal');
 
-        if (leaveDetailModal) {
-            // เมื่อ Modal เปิดขึ้น
-            leaveDetailModal.addEventListener('show.bs.modal', function(event) {
-                var button = event.relatedTarget; 
-                var name = button.getAttribute('data-name');
-                var start = button.getAttribute('data-start');
-                var end = button.getAttribute('data-end');
-                var leaveType = button.getAttribute('data-leave-type');
-                var status = button.getAttribute('data-status');
-                var remarks = button.getAttribute('data-remarks');
-                var applicationId = button.getAttribute('data-application-id');
+            if (leaveDetailModal) {
+                // เมื่อ Modal เปิดขึ้น
+                leaveDetailModal.addEventListener('show.bs.modal', function (event) {
+                    var button = event.relatedTarget;
+                    var name = button.getAttribute('data-name');
+                    var start = button.getAttribute('data-start');
+                    var end = button.getAttribute('data-end');
+                    var leaveType = button.getAttribute('data-leave-type');
+                    var status = button.getAttribute('data-status');
+                    var remarks = button.getAttribute('data-remarks');
+                    var applicationId = button.getAttribute('data-application-id');
 
-                // ใส่ค่าลงใน Modal
-                document.getElementById('modal-leave-type').textContent = leaveType;
-                document.getElementById('modal-start-date').textContent = start;
-                document.getElementById('modal-end-date').textContent = end;
-                document.getElementById('modal-status').textContent = status;
-                document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
+                    // ใส่ค่าลงใน Modal
+                    document.getElementById('modal-leave-type').textContent = leaveType;
+                    document.getElementById('modal-start-date').textContent = start;
+                    document.getElementById('modal-end-date').textContent = end;
+                    document.getElementById('modal-status').textContent = status;
+                    document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
 
-                var cancelLeaveButton = document.getElementById('cancelLeaveButton');
-                var printDocumentButton = document.getElementById('printDocumentButton');
+                    var cancelLeaveButton = document.getElementById('cancelLeaveButton');
+                    var printDocumentButton = document.getElementById('printDocumentButton');
 
-                // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
-                if (status === 'รออนุมัติ') {
-                    cancelLeaveButton.style.display = 'inline-block';
-                    cancelLeaveButton.setAttribute('data-application-id', applicationId);
-                } else {
-                    cancelLeaveButton.style.display = 'none';
-                }
+                    // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
+                    if (status === 'รออนุมัติ') {
+                        cancelLeaveButton.style.display = 'inline-block';
+                        cancelLeaveButton.setAttribute('data-application-id', applicationId);
+                    } else {
+                        cancelLeaveButton.style.display = 'none';
+                    }
 
-                // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
-                printDocumentButton.setAttribute('data-application-id', applicationId);
-            });
+                    // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
+                    printDocumentButton.setAttribute('data-application-id', applicationId);
+                });
 
-            // ฟังก์ชันปุ่ม "ยกเลิกการลา"
-            document.getElementById('cancelLeaveButton').addEventListener('click', function() {
-                var applicationId = this.getAttribute('data-application-id');
-                if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
-                    window.location.href = 'cancel_leave.php?id=' + applicationId;
-                }
-            });
+                // ฟังก์ชันปุ่ม "ยกเลิกการลา"
+                document.getElementById('cancelLeaveButton').addEventListener('click', function () {
+                    var applicationId = this.getAttribute('data-application-id');
+                    if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
+                        window.location.href = 'cancel_leave.php?id=' + applicationId;
+                    }
+                });
 
-            // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
-            document.getElementById('printDocumentButton').addEventListener('click', function() {
-                var applicationId = this.getAttribute('data-application-id');
-                if (applicationId) {
-                    window.location.href = 'generate_pdf.php?id=' + applicationId;
-                } else {
-                    alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
-                }
-            });
-        }
-    });
+                // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
+                document.getElementById('printDocumentButton').addEventListener('click', function () {
+                    var applicationId = this.getAttribute('data-application-id');
+                    if (applicationId) {
+                        window.location.href = 'generate_pdf.php?id=' + applicationId;
+                    } else {
+                        alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
+                    }
+                });
+            }
+        });
     </script>
 
 </body>
+
 </html>

@@ -29,6 +29,7 @@ $conn->close();
 ?>
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <title>จัดการผู้ใช้งาน</title>
@@ -39,45 +40,57 @@ $conn->close();
             font-family: 'Arial', sans-serif;
             padding-top: 70px;
         }
+
         .manage-container {
             background: #ffffff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             max-width: 1000px;
             margin: auto;
         }
+
         .table-container {
             margin-top: 20px;
         }
-        .btn-primary, .btn-danger, .btn-warning {
+
+        .btn-primary,
+        .btn-danger,
+        .btn-warning {
             font-size: 14px;
             padding: 8px 16px;
         }
+
         .img-thumbnail {
             width: 50px;
             height: 50px;
             object-fit: cover;
             border-radius: 50%;
         }
+
         .table-dark th {
             background-color: #343a40;
             color: #fff;
         }
-        .table th, .table td {
+
+        .table th,
+        .table td {
             vertical-align: middle;
         }
+
         .no-data-message {
             text-align: center;
             font-size: 18px;
             color: #888;
         }
+
         .modal-body img {
             width: 150px;
             height: 150px;
             object-fit: cover;
             border-radius: 50%;
         }
+
         .modal-body .details {
             display: flex;
             flex-direction: column;
@@ -85,6 +98,7 @@ $conn->close();
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -127,14 +141,14 @@ $conn->close();
                                 <td><?= htmlspecialchars($user['Email']); ?></td>
                                 <td><?= htmlspecialchars($user['Role']); ?></td>
                                 <td>
-                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#userDetailModal" 
-                                            data-userid="<?= $user['UserID']; ?>"
-                                            data-username="<?= htmlspecialchars($user['Username']); ?>"
-                                            data-firstname="<?= htmlspecialchars($user['FirstName']); ?>"
-                                            data-lastname="<?= htmlspecialchars($user['LastName']); ?>"
-                                            data-email="<?= htmlspecialchars($user['Email']); ?>"
-                                            data-role="<?= htmlspecialchars($user['Role']); ?>"
-                                            data-profile_picture="<?= htmlspecialchars($user['profile_picture']); ?>">
+                                    <button class="btn btn-sm btn-info" data-bs-toggle="modal" data-bs-target="#userDetailModal"
+                                        data-userid="<?= $user['UserID']; ?>"
+                                        data-username="<?= htmlspecialchars($user['Username']); ?>"
+                                        data-firstname="<?= htmlspecialchars($user['FirstName']); ?>"
+                                        data-lastname="<?= htmlspecialchars($user['LastName']); ?>"
+                                        data-email="<?= htmlspecialchars($user['Email']); ?>"
+                                        data-role="<?= htmlspecialchars($user['Role']); ?>"
+                                        data-profile_picture="<?= htmlspecialchars($user['profile_picture']); ?>">
                                         ดูรายละเอียด
                                     </button>
                                 </td>
@@ -148,7 +162,8 @@ $conn->close();
     </div>
 
     <!-- Modal for user details -->
-    <div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel" aria-hidden="true">
+    <div class="modal fade" id="userDetailModal" tabindex="-1" aria-labelledby="userDetailModalLabel"
+        aria-hidden="true">
         <div class="modal-dialog">
             <div class="modal-content">
                 <div class="modal-header">
@@ -167,7 +182,8 @@ $conn->close();
                     </div>
                     <div class="modal-footer">
                         <a href="edit_user.php?userid=" id="editUserBtn" class="btn btn-warning">แก้ไข</a>
-                        <a href="delete_user.php?userid=" id="deleteUserBtn" class="btn btn-danger" onclick="return confirm('คุณต้องการลบผู้ใช้งานนี้หรือไม่?');">ลบ</a>
+                        <a href="delete_user.php?userid=" id="deleteUserBtn" class="btn btn-danger"
+                            onclick="return confirm('คุณต้องการลบผู้ใช้งานนี้หรือไม่?');">ลบ</a>
                     </div>
                 </div>
             </div>
@@ -179,7 +195,7 @@ $conn->close();
     <script>
         // แสดงข้อมูลผู้ใช้งานใน modal เมื่อคลิกปุ่ม "ดูรายละเอียด"
         const userDetailModal = document.getElementById('userDetailModal');
-        userDetailModal.addEventListener('show.bs.modal', function(event) {
+        userDetailModal.addEventListener('show.bs.modal', function (event) {
             const button = event.relatedTarget; // ปุ่มที่คลิก
             const userId = button.getAttribute('data-userid');
             const username = button.getAttribute('data-username');
@@ -202,4 +218,5 @@ $conn->close();
         });
     </script>
 </body>
+
 </html>

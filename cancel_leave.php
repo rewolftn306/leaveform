@@ -52,7 +52,7 @@ if ($result->num_rows > 0) {
             echo "Error preparing the update statement: " . $conn->error;
             exit;
         }
-        
+
         $update_stmt->bind_param("i", $application_id);
         if ($update_stmt->execute()) {
             echo 'success';

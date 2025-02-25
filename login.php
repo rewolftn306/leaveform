@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -14,6 +15,7 @@
             height: 100vh;
             flex-direction: column;
         }
+
         header {
             width: 100%;
             background-color: rgba(0, 0, 0, 0.8);
@@ -25,9 +27,11 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             z-index: 1000;
         }
+
         header img {
             height: 100px;
         }
+
         .login-container {
             background-color: rgba(0, 0, 0, 0.8);
             border-radius: 8px;
@@ -37,19 +41,23 @@
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
             margin-top: 80px;
         }
+
         .login-container h1 {
             margin-bottom: 20px;
             text-align: center;
         }
+
         .login-btn {
             width: 100%;
             margin-top: 10px;
         }
+
         .error-message {
             color: red;
             margin-top: 10px;
             text-align: center;
         }
+
         .developer-btn {
             position: fixed;
             bottom: 20px;
@@ -63,11 +71,13 @@
             text-decoration: none;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
         }
+
         .developer-btn:hover {
             background-color: #e64a19;
         }
     </style>
 </head>
+
 <body>
     <!-- Head bar -->
     <header>
@@ -83,7 +93,8 @@
             </div>
             <div class="mb-3">
                 <label for="password" class="form-label">รหัสผ่าน</label>
-                <input type="password" id="password" name="password" class="form-control" placeholder="รหัสผ่าน" required>
+                <input type="password" id="password" name="password" class="form-control" placeholder="รหัสผ่าน"
+                    required>
             </div>
             <button type="submit" class="btn btn-primary login-btn">เข้าสู่ระบบ</button>
             <?php if (isset($_GET['error'])): ?>
@@ -100,7 +111,7 @@
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    
+
     <!-- JavaScript สำหรับแสดงป๊อปอัพแจ้งเตือน -->
     <script>
         <?php if (isset($_GET['success'])): ?>
@@ -111,4 +122,5 @@
         <?php endif; ?>
     </script>
 </body>
+
 </html>

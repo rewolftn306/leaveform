@@ -16,7 +16,8 @@ if ($_SESSION['Role'] !== 'Employee') {
 include('connect.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
-function sanitize_input($data) {
+function sanitize_input($data)
+{
     return htmlspecialchars(stripslashes(trim($data)));
 }
 

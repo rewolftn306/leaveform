@@ -15,7 +15,8 @@ if (!hash_equals($_SESSION['csrf_token'], $_POST['csrf_token'])) {
 include('connect.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
-function sanitize_input($data) {
+function sanitize_input($data)
+{
     return htmlspecialchars(stripslashes(trim($data)));
 }
 

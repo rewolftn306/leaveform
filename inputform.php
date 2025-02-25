@@ -45,6 +45,7 @@ if (isset($_GET['success'])) {
 ?>
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -55,14 +56,16 @@ if (isset($_GET['success'])) {
             background-color: #f4f4f9;
             padding-top: 70px;
         }
+
         .form-container {
             background: #ffffff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
-            max-width: 500px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            max-width: 600px;
             margin: auto;
         }
+
         .btn-back {
             background-color: #dc3545;
             color: white;
@@ -72,16 +75,18 @@ if (isset($_GET['success'])) {
             margin-top: 10px;
             display: inline-block;
         }
+
         .btn-back:hover {
             background-color: #c82333;
         }
     </style>
 </head>
+
 <body>
     <div class="container">
         <div class="form-container">
             <h2 class="text-center mb-4">ฟอร์มกรอกข้อมูลการลา</h2>
-            
+
             <!-- แสดงแจ้งเตือนถ้ามี -->
             <?php if ($alertType && $alertMessage): ?>
                 <div class="alert alert-<?= $alertType; ?> alert-dismissible fade show" role="alert">
@@ -89,19 +94,22 @@ if (isset($_GET['success'])) {
                     <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                 </div>
             <?php endif; ?>
-            
+
             <!-- แสดงข้อมูลผู้ใช้ปัจจุบัน -->
             <div class="mb-3">
-                <label class="form-label"><strong>ชื่อ:</strong> <?= htmlspecialchars($firstName . ' ' . $lastName); ?></label>
+                <label class="form-label"><strong>ชื่อ:</strong>
+                    <?= htmlspecialchars($firstName . ' ' . $lastName); ?></label>
             </div>
 
             <form action="submit_leave.php" method="POST" novalidate>
                 <div class="mb-3">
                     <label for="leave_type" class="form-label">ประเภทการลา:</label>
-                    <select id="leave_type" name="leave_type" class="form-select" required onchange="fetchConditions(this.value)">
+                    <select id="leave_type" name="leave_type" class="form-select" required
+                        onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
-                            <option value="<?= intval($type['LeaveTypeID']); ?>" <?= $type['LeaveName'] == 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร' ? 'selected' : '' ?>>
+                            <option value="<?= intval($type['LeaveTypeID']); ?>"
+                                <?= $type['LeaveName'] == 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร' ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($type['LeaveName']); ?>
                             </option>
                         <?php endforeach; ?>
@@ -114,8 +122,10 @@ if (isset($_GET['success'])) {
                 <!-- ตัวเลือกสำหรับกรอกข้อมูล -->
                 <div id="additional_options" class="mb-3" style="display: none;">
                     <label class="form-label">กรุณาเลือกตัวเลือก:</label><br>
-                    <input type="radio" id="attachDocuments" name="document_option" value="attach" onchange="toggleFileInput(true)"> แนบสำเนาสูติบัตรและทะเบียนสมรส
-                    <input type="radio" id="sendDocuments" name="document_option" value="send" onchange="toggleFileInput(false)"> ขอจัดส่งในวันแรกที่ข้าพกลับมา
+                    <input type="radio" id="attachDocuments" name="document_option" value="attach"
+                        onchange="toggleFileInput(true)"> แนบสำเนาสูติบัตรและทะเบียนสมรส
+                    <input type="radio" id="sendDocuments" name="document_option" value="send"
+                        onchange="toggleFileInput(false)"> ขอจัดส่งในวันแรกที่ข้าพกลับมา
                 </div>
 
                 <!-- ช่องสำหรับแนบไฟล์เมื่อเลือก "แนบเอกสาร" -->
@@ -134,7 +144,8 @@ if (isset($_GET['success'])) {
                 </div>
                 <div class="mb-3">
                     <label for="remarks" class="form-label">เหตุผลการลา:</label>
-                     <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา" maxlength="45" required></textarea>
+                    <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา"
+                        maxlength="45" required></textarea>
                 </div>
 
 
@@ -152,7 +163,7 @@ if (isset($_GET['success'])) {
         // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
             const additionalOptionsSection = document.getElementById('additional_options');
-            
+
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
                 additionalOptionsSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
@@ -200,5 +211,5 @@ if (isset($_GET['success'])) {
         }
     </script>
 </body>
+
 </html>
- 

@@ -174,6 +174,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
 ?>
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <title>สร้างบัญชีผู้ใช้งาน</title>
@@ -183,14 +184,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
             background-color: #f4f4f9;
             padding-top: 70px;
         }
+
         .form-container {
             background: #ffffff;
             padding: 30px;
             border-radius: 8px;
-            box-shadow: 0 4px 8px rgba(0,0,0,0.1);
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
             max-width: 600px;
             margin: auto;
         }
+
         .btn-back {
             background-color: #dc3545;
             color: white;
@@ -200,11 +203,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
             margin-top: 10px;
             display: inline-block;
         }
+
         .btn-back:hover {
             background-color: #c82333;
         }
     </style>
 </head>
+
 <body>
     <!-- Header -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
@@ -252,9 +257,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                 </div>
                 <div class="mb-3">
                     <label for="role" class="form-label">บทบาท</label>
-                    <select id="role" name="role" class="form-select" required onchange="toggleEmployeeFields(this.value)">
+                    <select id="role" name="role" class="form-select" required
+                        onchange="toggleEmployeeFields(this.value)">
                         <option value="">-- เลือกบทบาท --</option>
-                        <option value="Director">อธิบดี (Director)</option>
+                        <option value="Director">หัวหน้า (Director)</option>
                         <option value="Admin">ผู้ดูแลระบบ (Admin)</option>
                         <option value="Employee">พนักงาน (Employee)</option>
                     </select>
@@ -276,7 +282,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                 </div>
                 <div class="mb-3">
                     <label for="profile_picture" class="form-label">โปรไฟล์รูปภาพ</label>
-                    <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*" required>
+                    <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*"
+                        required>
                 </div>
                 <!-- ใส่ CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -304,4 +311,5 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
         }
     </script>
 </body>
+
 </html>
