@@ -177,16 +177,36 @@ $chartValues = json_encode(array_values($chartData));
         }
 
         .chart-container {
-            width: 100%;
-            max-width: 500px;
-            margin: 20px auto;
+            display: flex;
+            justify-content: center; /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวนอน */
+            align-items: center; /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวตั้ง */
+            width: 105%;
+            padding: 0 10px;
         }
 
         #leaveChart {
-            width: 100% !important;
-            height: 400px !important; /* เพิ่มความสูงของกราฟ */
+            width: 80%;
+            height: 400px !important;
         }
 
+        .legend-container {
+            width: 20%;
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .legend-item {
+            display: flex;
+            align-items: center;
+            margin-bottom: 10px;
+        }
+
+        .color-box {
+            width: 20px;
+            height: 20px;
+            margin-right: 10px;
+        }
 
         .table-container {
             margin-top: 20px;
@@ -262,22 +282,23 @@ $chartValues = json_encode(array_values($chartData));
         </div>
 
         <!-- Chart Section -->
-        <?php if (array_sum($chartData) > 0): ?>
-            <div class="chart-container">
+        <div class="chart-container">
+            <div class="chart-wrapper">
                 <canvas id="leaveChart" aria-label="กราฟสถิติการลางาน" role="img"></canvas>
             </div>
-        <?php else: ?>
-            <p class="text-center">ไม่มีข้อมูลการลางานเพื่อแสดงกราฟ</p>
-        <?php endif; ?>
+            <div class="legend-container" id="leaveTypesLegend">
+                <!-- รายการชื่อประเภทการลาจะถูกเติมที่นี่โดย JavaScript -->
+            </div>
+        </div>
 
         <!-- Table Section -->
         <div class="table-container">
             <h3 class="text-center">
                 <?php
                 if ($role === 'Admin' || $role === 'Director') {
-                    echo 'ตารางสรุปการลางานของลูกจ้าง';
+                    echo 'ตารางการลางานของลูกจ้าง';
                 } else {
-                    echo 'ตารางสรุปการลางาน';
+                    echo 'ตารางการลางาน';
                 }
                 ?>
             </h3>
@@ -306,7 +327,7 @@ $chartValues = json_encode(array_values($chartData));
                                 <td><?= $row['leave_days']; ?> วัน</td>
                                 <td>
                                     <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal"
-                                        data-name="<?= $row['name']; ?>" data-start="<?= $row['start_date']; ?>"
+                                        data-name="<?= $row['name']; ?>" data-start="<?= $row['start_date']; ?> "
                                         data-end="<?= $row['end_date']; ?>" data-leave-type="<?= $row['leave_type']; ?>"
                                         data-status="<?= $row['approval_status']; ?>" data-remarks="<?= $row['remarks']; ?>"
                                         data-application-id="<?= $row['application_id']; ?>">
@@ -359,48 +380,54 @@ $chartValues = json_encode(array_values($chartData));
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
         <script>
-        // Graph generation
+            const chartColors = [
+                '#4a90e2', '#8bc34a', '#9e9e9e', '#003366', '#ffcc00', // 5 สีแรก
+                '#66bb6a', '#d32f2f', '#0288d1', '#7b1fa2', '#fbc02d', // 5 สีถัดไป
+                '#c2185b', '#1976d2'  // 2 สีสุดท้าย
+            ];
+
+
+        // การแสดงกราฟ
         const ctx = document.getElementById('leaveChart').getContext('2d');
         const leaveChart = new Chart(ctx, {
-            type: 'bar',
+            type: 'bar', // ใช้กราฟแท่ง
             data: {
-                labels: <?= $chartLabels; ?>, // labels from leavetypes
+                labels: <?= $chartLabels; ?>,
                 datasets: [{
                     label: 'จำนวนวันลา',
-                    data: <?= $chartValues; ?>, // data from leave applications
-                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff', '#66ff66', '#ff66ff'], // Color for bars
-                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc', '#33cc33', '#ff3399'],
+                    data: <?= $chartValues; ?>,
+                    backgroundColor: chartColors.slice(0, <?= count($leaveTypes); ?>), // ใช้จำนวนสีที่ตรงกับจำนวนประเภทการลา
+                    borderColor: chartColors.slice(0, <?= count($leaveTypes); ?>), // ใช้สีเดียวกันในกราฟ
                     borderWidth: 1
                 }]
             },
             options: {
-                responsive: true,  // ทำให้กราฟสามารถปรับขนาดได้
-                maintainAspectRatio: false,  // ปรับอัตราส่วนได้ตามความต้องการ
+                responsive: true,
+                maintainAspectRatio: false,
                 scales: {
                     x: {
                         ticks: {
-                            maxRotation: 45,  // หมุนข้อความในแกน X สูงสุด 45 องศา
-                            minRotation: 45   // หมุนข้อความในแกน X ต่ำสุด 45 องศา
+                            display: false
                         }
                     },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            precision: 0  // ใช้จำนวนเต็มในแกน Y
+                            precision: 0
                         }
                     }
                 },
                 plugins: {
                     legend: {
-                        display: false  // ซ่อน legend
+                        display: false // ปิดการแสดงผล legend ในกราฟ
                     },
                     tooltip: {
                         callbacks: {
                             title: function(tooltipItem) {
-                                return tooltipItem[0].label;  // แสดงชื่อเต็มใน tooltip
+                                return tooltipItem[0].label;
                             },
                             label: function(tooltipItem) {
-                                return tooltipItem.raw + ' วัน';  // แสดงจำนวนวันลาใน tooltip
+                                return tooltipItem.raw + ' วัน';
                             }
                         }
                     }
@@ -408,66 +435,86 @@ $chartValues = json_encode(array_values($chartData));
             }
         });
 
-    </script>
+        // แสดงชื่อประเภทการลาและสีภายนอกกราฟ
+        const leaveTypes = <?= $chartLabels; ?>;
+        const legendContainer = document.getElementById('leaveTypesLegend');
+        leaveTypes.forEach((leaveType, index) => {
+            const legendItem = document.createElement('div');
+            legendItem.classList.add('legend-item');
 
+            const colorBox = document.createElement('div');
+            colorBox.classList.add('color-box');
+            colorBox.style.backgroundColor = chartColors[index];
+
+            const label = document.createElement('span');
+            label.innerText = leaveType;
+
+            legendItem.appendChild(colorBox);
+            legendItem.appendChild(label);
+            legendContainer.appendChild(legendItem);
+        });
+        
+    </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-            var leaveDetailModal = document.getElementById('leaveDetailModal');
+    var leaveDetailModal = document.getElementById('leaveDetailModal');
 
-            if (leaveDetailModal) {
-                // เมื่อ Modal เปิดขึ้น
-                leaveDetailModal.addEventListener('show.bs.modal', function (event) {
-                    var button = event.relatedTarget;
-                    var name = button.getAttribute('data-name');
-                    var start = button.getAttribute('data-start');
-                    var end = button.getAttribute('data-end');
-                    var leaveType = button.getAttribute('data-leave-type');
-                    var status = button.getAttribute('data-status');
-                    var remarks = button.getAttribute('data-remarks');
-                    var applicationId = button.getAttribute('data-application-id');
+    if (leaveDetailModal) {
+        // เมื่อ Modal เปิดขึ้น
+        leaveDetailModal.addEventListener('show.bs.modal', function (event) {
+            var button = event.relatedTarget;
+            var name = button.getAttribute('data-name');
+            var start = button.getAttribute('data-start');
+            var end = button.getAttribute('data-end');
+            var leaveType = button.getAttribute('data-leave-type');
+            var status = button.getAttribute('data-status');
+            var remarks = button.getAttribute('data-remarks');
+            var applicationId = button.getAttribute('data-application-id');
 
-                    // ใส่ค่าลงใน Modal
-                    document.getElementById('modal-leave-type').textContent = leaveType;
-                    document.getElementById('modal-start-date').textContent = start;
-                    document.getElementById('modal-end-date').textContent = end;
-                    document.getElementById('modal-status').textContent = status;
-                    document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
+            // ใส่ค่าลงใน Modal
+            document.getElementById('modal-leave-type').textContent = leaveType;
+            document.getElementById('modal-start-date').textContent = start;
+            document.getElementById('modal-end-date').textContent = end;
+            document.getElementById('modal-status').textContent = status;
+            document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
 
-                    var cancelLeaveButton = document.getElementById('cancelLeaveButton');
-                    var printDocumentButton = document.getElementById('printDocumentButton');
+            var cancelLeaveButton = document.getElementById('cancelLeaveButton');
+            var printDocumentButton = document.getElementById('printDocumentButton');
 
-                    // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
-                    if (status === 'รออนุมัติ') {
-                        cancelLeaveButton.style.display = 'inline-block';
-                        cancelLeaveButton.setAttribute('data-application-id', applicationId);
-                    } else {
-                        cancelLeaveButton.style.display = 'none';
-                    }
+            // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
+            if (status === 'รออนุมัติ') {
+                cancelLeaveButton.style.display = 'inline-block';
+                cancelLeaveButton.setAttribute('data-application-id', applicationId);
+            } else {
+                cancelLeaveButton.style.display = 'none';
+            }
 
-                    // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
-                    printDocumentButton.setAttribute('data-application-id', applicationId);
-                });
+            // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
+            printDocumentButton.setAttribute('data-application-id', applicationId);
+        });
 
-                // ฟังก์ชันปุ่ม "ยกเลิกการลา"
-                document.getElementById('cancelLeaveButton').addEventListener('click', function () {
-                    var applicationId = this.getAttribute('data-application-id');
-                    if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
-                        window.location.href = 'cancel_leave.php?id=' + applicationId;
-                    }
-                });
-
-                // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
-                document.getElementById('printDocumentButton').addEventListener('click', function () {
-                    var applicationId = this.getAttribute('data-application-id');
-                    if (applicationId) {
-                        window.location.href = 'generate_pdf.php?id=' + applicationId;
-                    } else {
-                        alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
-                    }
-                });
+        // ฟังก์ชันปุ่ม "ยกเลิกการลา"
+        document.getElementById('cancelLeaveButton').addEventListener('click', function () {
+            var applicationId = this.getAttribute('data-application-id');
+            if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
+                window.location.href = 'cancel_leave.php?id=' + applicationId;
             }
         });
+
+        // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
+        document.getElementById('printDocumentButton').addEventListener('click', function () {
+            var applicationId = this.getAttribute('data-application-id');
+            if (applicationId) {
+                window.location.href = 'generate_pdf.php?id=' + applicationId;
+            } else {
+                alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
+            }
+        });
+    }
+});
+
     </script>
+
 
 </body>
 
