@@ -46,7 +46,8 @@ if ($role === 'Admin' || $role === 'Director') {
             FROM users u
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-            WHERE la.LeaveTypeID IS NOT NULL";
+            WHERE la.LeaveTypeID IS NOT NULL
+            ORDER BY la.StartDate DESC";  // เพิ่ม ORDER BY
     $stmt = $conn->prepare($sql);
     $stmt->execute();
 } else {
@@ -55,11 +56,13 @@ if ($role === 'Admin' || $role === 'Director') {
             FROM users u
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-            WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL";
+            WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL
+            ORDER BY la.StartDate DESC";  // เพิ่ม ORDER BY
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $user_name);
     $stmt->execute();
 }
+
 
 $result = $stmt->get_result();
 
@@ -181,8 +184,9 @@ $chartValues = json_encode(array_values($chartData));
 
         #leaveChart {
             width: 100% !important;
-            height: 250px !important;
+            height: 400px !important; /* เพิ่มความสูงของกราฟ */
         }
+
 
         .table-container {
             margin-top: 20px;
@@ -354,7 +358,7 @@ $chartValues = json_encode(array_values($chartData));
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
+        <script>
         // Graph generation
         const ctx = document.getElementById('leaveChart').getContext('2d');
         const leaveChart = new Chart(ctx, {
@@ -364,37 +368,48 @@ $chartValues = json_encode(array_values($chartData));
                 datasets: [{
                     label: 'จำนวนวันลา',
                     data: <?= $chartValues; ?>, // data from leave applications
-                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff'],
-                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc'],
+                    backgroundColor: ['#ff7f7f', '#ffcc00', '#99ccff', '#66ff66', '#ff66ff'], // Color for bars
+                    borderColor: ['#ff4d4d', '#ff9900', '#6699cc', '#33cc33', '#ff3399'],
                     borderWidth: 1
                 }]
             },
             options: {
-                responsive: true,
-                maintainAspectRatio: false,
+                responsive: true,  // ทำให้กราฟสามารถปรับขนาดได้
+                maintainAspectRatio: false,  // ปรับอัตราส่วนได้ตามความต้องการ
                 scales: {
+                    x: {
+                        ticks: {
+                            maxRotation: 45,  // หมุนข้อความในแกน X สูงสุด 45 องศา
+                            minRotation: 45   // หมุนข้อความในแกน X ต่ำสุด 45 องศา
+                        }
+                    },
                     y: {
                         beginAtZero: true,
                         ticks: {
-                            precision: 0
+                            precision: 0  // ใช้จำนวนเต็มในแกน Y
                         }
                     }
                 },
                 plugins: {
                     legend: {
-                        display: false
+                        display: false  // ซ่อน legend
                     },
                     tooltip: {
                         callbacks: {
-                            label: function (context) {
-                                return context.parsed.y + ' วัน'; // แสดงจำนวนวันลา
+                            title: function(tooltipItem) {
+                                return tooltipItem[0].label;  // แสดงชื่อเต็มใน tooltip
+                            },
+                            label: function(tooltipItem) {
+                                return tooltipItem.raw + ' วัน';  // แสดงจำนวนวันลาใน tooltip
                             }
                         }
                     }
                 }
             }
         });
+
     </script>
+
     <script>
         document.addEventListener("DOMContentLoaded", function () {
             var leaveDetailModal = document.getElementById('leaveDetailModal');
