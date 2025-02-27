@@ -1,5 +1,4 @@
 <?php
-// submit_leave.php
 session_start();
 
 // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
@@ -61,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ตรวจสอบว่าประเภทการลาเป็นประเภทที่มีอยู่จริงหรือไม่
-    $stmt = $conn->prepare("SELECT LeaveTypeID FROM leavetypes WHERE LeaveTypeID = ?");
+    $stmt = $conn->prepare("SELECT LeaveTypeID, LeaveName FROM leavetypes WHERE LeaveTypeID = ?");
     if (!$stmt) {
         error_log("Prepare failed: " . $conn->error);
         header("Location: inputform.php?error=เกิดข้อผิดพลาดในการส่งคำขอการลา");
@@ -74,6 +73,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: inputform.php?error=ประเภทการลาไม่ถูกต้อง");
         exit();
     }
+
+    // ดึงชื่อประเภทการลา
+    $stmt->bind_result($leaveTypeID, $leaveTypeName);
+    $stmt->fetch();
     $stmt->close();
 
     // ตรวจสอบว่ามีการเลือกตัวเลือก "แนบไฟล์" หรือ "ขอจัดส่ง"
@@ -102,6 +105,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $stmt->bind_param("iisssss", $employeeID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
 
     if ($stmt->execute()) {
+        // ส่งข้อมูลไปยัง Google Chat Webhook หลังจากบันทึกข้อมูลในฐานข้อมูลสำเร็จ
+        $webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAaBCuirU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=B4GrHde2cf_gpcXXLc6mS6FmNuvvsxdTIJYXnj4btEY'; // แทนที่ด้วย URL Webhook ที่ถูกต้อง
+        $message = [
+            'text' => "มีการส่งคำขอลางานใหม่จาก: {$_SESSION['FirstName']} {$_SESSION['LastName']}\n" .
+                      "ประเภทการลา: $leaveTypeName\n" .
+                      "วันที่เริ่มลา: $startDate\n" .
+                      "วันที่สิ้นสุดการลา: $endDate\n" .
+                      "เหตุผลการลา: $remarks\n" .
+                      "ตัวเลือกเอกสาร: $documentOption"
+        ];
+
+        // ใช้ cURL ส่งข้อมูลไปยัง Google Chat Webhook
+        $ch = curl_init($webhookUrl);
+        curl_setopt($ch, CURLOPT_POST, true);
+        curl_setopt($ch, CURLOPT_POSTFIELDS, json_encode($message));
+        curl_setopt($ch, CURLOPT_HTTPHEADER, ['Content-Type: application/json']);
+        $response = curl_exec($ch);
+        curl_close($ch);
+
+        // ส่งผู้ใช้กลับไปที่หน้า inputform พร้อมข้อความสำเร็จ
         header("Location: inputform.php?success=ส่งคำขอการลาเรียบร้อยแล้ว");
         exit();
     } else {

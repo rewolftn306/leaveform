@@ -47,7 +47,7 @@ if ($role === 'Admin' || $role === 'Director') {
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE la.LeaveTypeID IS NOT NULL
-            ORDER BY la.StartDate DESC";  // เพิ่ม ORDER BY
+            ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
     $stmt = $conn->prepare($sql);
     $stmt->execute();
 } else {
@@ -57,7 +57,7 @@ if ($role === 'Admin' || $role === 'Director') {
             LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL
-            ORDER BY la.StartDate DESC";  // เพิ่ม ORDER BY
+            ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $user_name);
     $stmt->execute();

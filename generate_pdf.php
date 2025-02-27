@@ -90,6 +90,11 @@ try {
 
 $pdf->SetTextColor(0, 0, 0);
 
+$signaturePath = 'signature/1.jpg';  // เปลี่ยนชื่อไฟล์ลายเซ็นต์ให้ตรง
+$signatureWidth = 30;  // ความกว้างของลายเซ็นต์
+$signatureHeight = 10;  // ความสูงของลายเซ็นต์
+
+
 // Function to handle Thai encoding
 function convertThai($text)
 {
@@ -179,6 +184,7 @@ switch ($leaveType) {
         $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
         $pdf->SetXY(175, 88.5);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
         $pdf->Write(0, convertThai($leaveDays . ' '));
+        $pdf->Image($signaturePath, 130, 122, $signatureWidth, $signatureHeight);
 
         switch ($leaveType) {
             case 'ลาป่วย':
