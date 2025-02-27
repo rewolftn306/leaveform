@@ -9,7 +9,7 @@ if (!isset($_SESSION['Username'])) {
 }
 
 // ตรวจสอบบทบาทของผู้ใช้
-$allowed_roles = ['Director', 'Admin'];
+$allowed_roles = ['Director', 'Leader', 'Admin'];
 if (!in_array($_SESSION['Role'], $allowed_roles)) {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
 }
@@ -57,33 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $update_stmt->bind_param('si', $status, $leave_id);
 
     if ($update_stmt->execute()) {
-        // ส่งอีเมล์แจ้งเตือนผู้ยื่นคำขอ
-        $stmt_leave = $conn->prepare("SELECT la.*, u.Email, u.FirstName, u.LastName, lt.LeaveName FROM leaveapplications la JOIN users u ON la.EmployeeID = u.UserID JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID WHERE la.ApplicationID = ?");
-        $stmt_leave->bind_param("i", $leave_id);
-        $stmt_leave->execute();
-        $result_leave = $stmt_leave->get_result();
-        if ($result_leave->num_rows > 0) {
-            $leave = $result_leave->fetch_assoc();
-            $email = $leave['Email'];
-            $firstName = $leave['FirstName'];
-            $lastName = $leave['LastName'];
-            $leaveType = $leave['LeaveName'];
-            $startDate = $leave['StartDate'];
-            $endDate = $leave['EndDate'];
-            $remarks = $leave['Remarks'];
-            $subject = "การอนุมัติการลาของคุณถูก $status";
-            $message = "สวัสดีคุณ $firstName $lastName,\n\nคำขอลาการลาของคุณได้ถูก $status.\n\nรายละเอียด:\nประเภทการลา: $leaveType\nวันที่เริ่ม: $startDate\nวันที่สิ้นสุด: $endDate\nหมายเหตุ: $remarks\n\nขอบคุณ.";
-            $headers = "From: no-reply@yourdomain.com\r\n" .
-                "Reply-To: no-reply@yourdomain.com\r\n" .
-                "X-Mailer: PHP/" . phpversion();
-
-            // ส่งอีเมล์อย่างปลอดภัย
-            if (!mail($email, $subject, $message, $headers)) {
-                error_log("Failed to send email to $email for leave application ID $leave_id");
-            }
-        }
-        $stmt_leave->close();
-
+        // ส่งกลับไปที่หน้าหลักพร้อมข้อความสำเร็จ
         header("Location: approve_leave.php?success=1");
         exit;
     } else {
@@ -105,9 +79,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
     // การค้นหาด้วยคำค้นหาตามชื่อ
     if (isset($_GET['search_term']) && !empty(trim($_GET['search_term']))) {
         $search_term = '%' . trim($_GET['search_term']) . '%';
-        $where_clauses[] = "e.Name LIKE ?";
+        $where_clauses[] = "u.FirstName LIKE ? OR u.LastName LIKE ?";
         $params[] = $search_term;
-        $types .= 's';
+        $params[] = $search_term;
+        $types .= 'ss';
     }
 
     // การกรองตามสถานะการอนุมัติ
@@ -122,23 +97,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
 // สร้างคำสั่ง SQL พร้อมการค้นหาและกรอง
 $sql = "SELECT 
             la.ApplicationID, 
-            la.EmployeeID, 
+            la.UserID, 
             la.LeaveTypeID, 
             la.StartDate, 
             la.EndDate, 
             la.ApprovalStatus, 
             la.Remarks, 
-            e.Name AS EmployeeName,
+            u.FirstName, 
+            u.LastName, 
             lt.LeaveName
         FROM leaveapplications la
-        JOIN employees e ON la.EmployeeID = e.EmployeeID
+        JOIN users u ON la.UserID = u.UserID
         JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID";
 
 if (!empty($where_clauses)) {
     $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
 
-$sql .= " ORDER BY la.ApplicationID DESC";
+// เพิ่มการเรียงลำดับให้สถานะ 'Pending' ขึ้นก่อน
+$sql .= " ORDER BY CASE WHEN la.ApprovalStatus = 'Pending' THEN 0 ELSE 1 END, la.ApplicationID DESC";
 
 // เตรียมคำสั่ง SQL
 $stmt = $conn->prepare($sql);
@@ -161,6 +138,7 @@ if ($stmt) {
 }
 
 $conn->close();
+
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -192,8 +170,6 @@ $conn->close();
 
         <!-- Search and Filter Form -->
         <form method="GET" style="margin-top: 70px;">
-
-
             <div class="row mb-3">
                 <div class="col-md-4">
                     <div class="input-group">
@@ -254,7 +230,7 @@ $conn->close();
                         <?php foreach ($leaves as $index => $leave): ?>
                             <tr>
                                 <td><?= $index + 1; ?></td>
-                                <td><?= htmlspecialchars($leave['EmployeeName']); ?></td>
+                                <td><?= htmlspecialchars($leave['FirstName']); ?></td>
                                 <td><?= htmlspecialchars($leave['LeaveName']); ?></td>
                                 <td><?= htmlspecialchars($leave['StartDate']); ?></td>
                                 <td><?= htmlspecialchars($leave['EndDate']); ?></td>
@@ -338,13 +314,6 @@ $conn->close();
                 </tbody>
             </table>
         </div>
-
-        <!-- Pagination (ตัวอย่างการเพิ่มหน้า) -->
-        <?php
-        // เพิ่มการแบ่งหน้า (Pagination) ที่นี่ หากข้อมูลมีจำนวนมาก
-        // ตัวอย่างเช่น การแบ่งหน้าเป็น 10 รายการต่อหน้า
-        // คุณสามารถใช้ library เช่น [Pagination](https://getbootstrap.com/docs/5.3/components/pagination/)
-        ?>
 
         <!-- Footer -->
         <div class="d-flex justify-content-between align-items-center mt-3">

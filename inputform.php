@@ -1,4 +1,5 @@
 <?php
+// inputform.php
 session_start();
 
 // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
@@ -103,7 +104,8 @@ if (isset($_GET['success'])) {
             <form action="submit_leave.php" method="POST" novalidate>
                 <div class="mb-3">
                     <label for="leave_type" class="form-label">ประเภทการลา:</label>
-                    <select id="leave_type" name="leave_type" class="form-select" required onchange="fetchConditions(this.value)">
+                    <select id="leave_type" name="leave_type" class="form-select" required
+                        onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
                             <option value="<?= intval($type['LeaveTypeID']); ?>"
@@ -145,6 +147,7 @@ if (isset($_GET['success'])) {
                     <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา"
                         maxlength="45" required></textarea>
                 </div>
+
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">

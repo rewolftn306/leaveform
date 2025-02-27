@@ -92,7 +92,6 @@ if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] ===
     exit();
 }
 
-
 // แฮชรหัสผ่าน
 $hashed_password = password_hash($password, PASSWORD_DEFAULT);
 
@@ -101,13 +100,13 @@ $conn->begin_transaction();
 
 try {
     // แทรกข้อมูลลงในตาราง users
-    $sql_users = "INSERT INTO users (Username, Password, FirstName, LastName, Email, Role, profile_picture) 
-                  VALUES (?, ?, ?, ?, ?, ?, ?)";
+    $sql_users = "INSERT INTO users (Username, Password, FirstName, LastName, Email, Role, profile_picture, Position, Department, Tel) 
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
     $stmt_users = $conn->prepare($sql_users);
     if (!$stmt_users) {
         throw new Exception("Prepare failed: " . $conn->error);
     }
-    $stmt_users->bind_param("sssssss", $username, $hashed_password, $firstname, $lastname, $email, $role, $profile_picture);
+    $stmt_users->bind_param("ssssssssss", $username, $hashed_password, $firstname, $lastname, $email, $role, $profile_picture, $position, $department, $tel);
 
     if (!$stmt_users->execute()) {
         throw new Exception("Execute failed: " . $stmt_users->error);
@@ -115,27 +114,6 @@ try {
 
     $last_inserted_id = $stmt_users->insert_id;
     $stmt_users->close();
-
-    // ถ้า Role เป็น Employee ให้แทรกข้อมูลลงในตาราง employees
-    if ($role === "Employee") {
-        $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role) 
-                          VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)";
-        $stmt_employees = $conn->prepare($sql_employees);
-        if (!$stmt_employees) {
-            throw new Exception("Prepare failed: " . $conn->error);
-        }
-
-        $full_name = $firstname . ' ' . $lastname;
-        $role_employee = 'Employee';
-
-        $stmt_employees->bind_param("isssssss", $last_inserted_id, $position, $department, $email, $tel, $full_name, $profile_picture, $role_employee);
-
-        if (!$stmt_employees->execute()) {
-            throw new Exception("Execute failed: " . $stmt_employees->error);
-        }
-
-        $stmt_employees->close();
-    }
 
     // Commit Transaction
     $conn->commit();
@@ -152,4 +130,3 @@ try {
 }
 
 $conn->close();
-?>

@@ -57,7 +57,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                 $stmt->close();
 
                 // จำกัดบทบาทที่ Admin สามารถสร้างได้
-                $allowed_roles = ['Director', 'Admin', 'Employee'];
+                $allowed_roles = ['Director', 'Leader', 'Admin', 'Employee'];
                 if (!in_array($role, $allowed_roles)) {
                     $error = "ไม่สามารถสร้างบัญชีผู้ใช้งานด้วยบทบาทนี้ได้";
                 } else {
@@ -80,8 +80,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                         }
 
                         if (!isset($error)) {
-                            $target_dir = "uploads/";
-                            // สร้างชื่อไฟล์แบบไม่ซ้ำกัน
+                            $target_dir = "uploads/"; // โฟลเดอร์ที่จะเก็บรูปภาพ
                             $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
                             $unique_name = uniqid('profile_', true) . '.' . $file_extension;
                             $target_file = $target_dir . $unique_name;
@@ -100,12 +99,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
 
                         try {
                             // แทรกข้อมูลผู้ใช้ใหม่
-                            $sql = "INSERT INTO users (Username, Password, FirstName, LastName, Email, Role, profile_picture) VALUES (?, ?, ?, ?, ?, ?, ?)";
+                            $sql = "INSERT INTO users (Username, Password, FirstName, LastName, Email, Role, Position, Department, Tel, profile_picture) 
+                                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
                             $stmt_insert = $conn->prepare($sql);
                             if (!$stmt_insert) {
                                 throw new Exception("Prepare failed: " . $conn->error);
                             }
-                            $stmt_insert->bind_param("sssssss", $username, $hashed_password, $firstname, $lastname, $email, $role, $profile_picture);
+                            $stmt_insert->bind_param("ssssssssss", $username, $hashed_password, $firstname, $lastname, $email, $role, $position, $department, $tel, $profile_picture);
 
                             if (!$stmt_insert->execute()) {
                                 throw new Exception("Execute failed: " . $stmt_insert->error);
@@ -113,46 +113,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
 
                             $last_inserted_id = $stmt_insert->insert_id;
                             $stmt_insert->close();
-
-                            // หากบทบาทเป็น Director หรือ Admin ให้เพิ่มลงในตาราง approvers
-                            $approverID_map = [
-                                'Director' => 1,
-                                'Admin' => 2
-                            ];
-
-                            if (array_key_exists($role, $approverID_map)) {
-                                $approverID = $approverID_map[$role];
-                                $stmt_approver = $conn->prepare("INSERT INTO approvers (UserID, ApproverID) VALUES (?, ?)");
-                                if (!$stmt_approver) {
-                                    throw new Exception("Prepare failed: " . $conn->error);
-                                }
-                                $stmt_approver->bind_param("ii", $last_inserted_id, $approverID);
-                                if (!$stmt_approver->execute()) {
-                                    throw new Exception("Execute failed: " . $stmt_approver->error);
-                                }
-                                $stmt_approver->close();
-                            }
-
-                            // หากเป็น Employee ให้แทรกลงในตาราง employees
-                            if ($role === 'Employee') {
-                                $sql_employees = "INSERT INTO employees (EmployeeID, Position, Department, StartOfWork, Email, Tel, Name, profile_picture, role) 
-                                                  VALUES (?, ?, ?, NOW(), ?, ?, ?, ?, ?)";
-                                $stmt_employees = $conn->prepare($sql_employees);
-                                if (!$stmt_employees) {
-                                    throw new Exception("Prepare failed: " . $conn->error);
-                                }
-
-                                $full_name = $firstname . ' ' . $lastname;
-                                $role_employee = 'Employee';
-
-                                $stmt_employees->bind_param("issssss", $last_inserted_id, $position, $department, $email, $tel, $full_name, $profile_picture, $role_employee);
-
-                                if (!$stmt_employees->execute()) {
-                                    throw new Exception("Execute failed: " . $stmt_employees->error);
-                                }
-
-                                $stmt_employees->close();
-                            }
 
                             // Commit Transaction
                             $conn->commit();
@@ -260,38 +220,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['create_user'])) {
                     <select id="role" name="role" class="form-select" required
                         onchange="toggleEmployeeFields(this.value)">
                         <option value="">-- เลือกบทบาท --</option>
-                        <option value="Director">หัวหน้า (Director)</option>
+                        <option value="Director">อธิบดี (Director)</option>
+                        <option value="Leader">หัวหน้า (Leader)</option>
                         <option value="Admin">ผู้ดูแลระบบ (Admin)</option>
                         <option value="Employee">พนักงาน (Employee)</option>
                     </select>
                 </div>
-                <!-- ฟิลด์เพิ่มเติมสำหรับ Employee -->
-                <div id="employee_fields" style="display: none;">
-                    <div class="mb-3">
-                        <label for="position" class="form-label">ตำแหน่ง</label>
-                        <input type="text" id="position" name="position" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label for="department" class="form-label">แผนก</label>
-                        <input type="text" id="department" name="department" class="form-control">
-                    </div>
-                    <div class="mb-3">
-                        <label for="tel" class="form-label">โทรศัพท์</label>
-                        <input type="text" id="tel" name="tel" class="form-control">
-                    </div>
+                <div class="mb-3">
+                    <label for="position" class="form-label">ตำแหน่ง</label>
+                    <input type="text" id="position" name="position" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="department" class="form-label">แผนก</label>
+                    <input type="text" id="department" name="department" class="form-control">
+                </div>
+                <div class="mb-3">
+                    <label for="tel" class="form-label">โทรศัพท์</label>
+                    <input type="text" id="tel" name="tel" class="form-control">
                 </div>
                 <div class="mb-3">
                     <label for="profile_picture" class="form-label">โปรไฟล์รูปภาพ</label>
                     <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*"
                         required>
                 </div>
-                <!-- ใส่ CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
                 <button type="submit" name="create_user" class="btn btn-primary w-100">สร้างบัญชีผู้ใช้งาน</button>
-            </form>
-            <a href="manage_approvers.php" class="btn-back">จัดการผู้อนุมัติ</a>
-            <a href="login.php" class="btn btn-danger float-end mt-3 w-20">ย้อนกลับ</a>
+                <a href="manage_users.php" class="btn btn-danger float-end mt-3 w-20">ย้อนกลับ</a>
         </div>
+        </form>
+
+    </div>
     </div>
 
     <!-- Bootstrap JS และ JavaScript สำหรับแสดงฟิลด์เพิ่มเติม -->

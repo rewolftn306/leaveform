@@ -182,7 +182,7 @@ $conn->close();
                     </div>
                     <div class="modal-footer">
                         <a href="edit_user.php?userid=" id="editUserBtn" class="btn btn-warning">แก้ไข</a>
-                        <a href="delete_user.php?userid=" id="deleteUserBtn" class="btn btn-danger"
+                        <a href="delete_user.php?userid=<?= $user['UserID']; ?>" class="btn btn-danger"
                             onclick="return confirm('คุณต้องการลบผู้ใช้งานนี้หรือไม่?');">ลบ</a>
                     </div>
                 </div>

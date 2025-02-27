@@ -18,11 +18,10 @@ include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
 $stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, 
-                               e.Position, e.Department, e.Tel, e.StartOfWork, la.CreateDate
+                               u.Position, u.Department, u.Tel, u.CreatedAt, la.CreateDate
                         FROM leaveapplications la 
-                        JOIN users u ON la.EmployeeID = u.UserID 
-                        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID 
-                        LEFT JOIN employees e ON la.EmployeeID = e.EmployeeID
+                        JOIN users u ON la.UserID = u.UserID
+                        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
                         WHERE la.ApplicationID = ?");
 $stmt->bind_param("i", $applicationId);
 $stmt->execute();
@@ -229,7 +228,7 @@ switch ($leaveType) {
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
         $formattedStartDate = convertToThaiDate($leaveData['StartDate']);
         $formattedEndDate = convertToThaiDate($leaveData['EndDate']);
-        $formattedStartOfWorkDate = convertToThaiDate($leaveData['StartOfWork']);
+        $formattedCreatedAtDate = convertToThaiDate($leaveData['CreatedAt']);
         $pdf->SetXY(124, 35.25);
         $pdf->Write(0, convertThai('' . $formattedDate));
         $pdf->SetXY(143, 29);
@@ -239,7 +238,7 @@ switch ($leaveType) {
         $pdf->SetXY(40, 79.5);
         $pdf->Write(0, convertThai('' . $leaveData['Department']));
         $pdf->SetXY(146, 83.25);
-        $pdf->Write(0, convertThai('' . $formattedStartOfWorkDate));
+        $pdf->Write(0, convertThai('' . $formattedCreatedAtDate));
         $pdf->SetXY(58, 73);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->SetXY(110, 120);
@@ -284,7 +283,7 @@ switch ($leaveType) {
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
         $formattedStartDate = convertToThaiDate($leaveData['StartDate']);
         $formattedEndDate = convertToThaiDate($leaveData['EndDate']);
-        $formattedStartOfWorkDate = convertToThaiDate($leaveData['StartOfWork']);
+        $formattedCreatedAtDate = convertToThaiDate($leaveData['CreatedAt']);
         $pdf->SetXY(129, 39.5);
         $pdf->Write(0, convertThai('' . $formattedDate));
         $pdf->SetXY(135, 67);
@@ -309,7 +308,7 @@ switch ($leaveType) {
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
         $formattedStartDate = convertToThaiDate($leaveData['StartDate']);
         $formattedEndDate = convertToThaiDate($leaveData['EndDate']);
-        $formattedStartOfWorkDate = convertToThaiDate($leaveData['StartOfWork']);
+        $formattedCreatedAtDate = convertToThaiDate($leaveData['CreatedAt']);
         $pdf->SetXY(121, 34.5);
         $pdf->Write(0, convertThai('' . $formattedDate));
         $pdf->SetXY(137, 28.5);

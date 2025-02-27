@@ -1,5 +1,4 @@
 <?php
-// edit_user.php
 session_start();
 
 // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
@@ -53,13 +52,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
     $password = trim($_POST['password']);
     $email = trim($_POST['email']);
     $role = trim($_POST['role']);
+    $firstname = trim($_POST['firstname']);
+    $lastname = trim($_POST['lastname']);
 
     // ตรวจสอบข้อมูลที่จำเป็น
-    if (empty($email) || empty($role)) {
+    if (empty($email) || empty($role) || empty($firstname) || empty($lastname)) {
         $error = "กรุณากรอกข้อมูลให้ครบถ้วน";
     } else {
         // จำกัดบทบาทที่ Admin สามารถตั้งได้
-        $allowed_roles = ['Director', 'Admin'];
+        $allowed_roles = ['Director', 'Leader', 'Admin', 'Employee'];
         if (!in_array($role, $allowed_roles)) {
             $error = "ไม่สามารถตั้งบทบาทนี้ได้";
         } else {
@@ -101,62 +102,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                 // แฮชรหัสผ่านถ้ามีการเปลี่ยนแปลง
                 if (!empty($password)) {
                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $sql = "UPDATE users SET Password = ?, Email = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
+                    $sql = "UPDATE users SET Password = ?, Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
                     $stmt_update = $conn->prepare($sql);
-                    $stmt_update->bind_param("ssssi", $hashed_password, $email, $role, $profile_picture, $userID);
+                    $stmt_update->bind_param("ssssssi", $hashed_password, $email, $firstname, $lastname, $role, $profile_picture, $userID);
                 } else {
-                    $sql = "UPDATE users SET Email = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
+                    $sql = "UPDATE users SET Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
                     $stmt_update = $conn->prepare($sql);
-                    $stmt_update->bind_param("sssi", $email, $role, $profile_picture, $userID);
+                    $stmt_update->bind_param("sssssi", $email, $firstname, $lastname, $role, $profile_picture, $userID);
                 }
 
+                // ตรวจสอบว่าการอัปเดตข้อมูลสำเร็จหรือไม่
                 if ($stmt_update->execute()) {
-                    // อัปเดตตาราง approvers ถ้าบทบาทเปลี่ยนแปลง
-                    // ดึง ApproverID จากฐานข้อมูลตามบทบาทที่เลือก
-                    $stmt_approver = $conn->prepare("SELECT ApproverID FROM approvers WHERE ApproverLevel = ?");
-                    if (!$stmt_approver) {
-                        throw new Exception("Prepare failed: " . $conn->error);
-                    }
-
-                    // กำหนด ApproverLevel ตามบทบาท
-                    $approver_level = ($role === 'Director') ? 1 : 2;
-                    $stmt_approver->bind_param("i", $approver_level);
-                    $stmt_approver->execute();
-                    $stmt_approver->bind_result($approverID);
-                    $stmt_approver->fetch();
-                    $stmt_approver->close();
-
-                    if ($approverID) {
-                        // ตรวจสอบว่ามีการอัปเดต approverID หรือไม่
-                        $stmt_check = $conn->prepare("SELECT * FROM approvers WHERE UserID = ?");
-                        $stmt_check->bind_param("i", $userID);
-                        $stmt_check->execute();
-                        $result_check = $stmt_check->get_result();
-                        if ($result_check->num_rows > 0) {
-                            // อัปเดต approverID
-                            $stmt_update_approver = $conn->prepare("UPDATE approvers SET ApproverID = ? WHERE UserID = ?");
-                            $stmt_update_approver->bind_param("ii", $approverID, $userID);
-                            if (!$stmt_update_approver->execute()) {
-                                throw new Exception("Update approver failed: " . $stmt_update_approver->error);
-                            }
-                            $stmt_update_approver->close();
-                        } else {
-                            // แทรกใหม่ถ้ายังไม่มี
-                            $stmt_insert_approver = $conn->prepare("INSERT INTO approvers (UserID, ApproverID) VALUES (?, ?)");
-                            $stmt_insert_approver->bind_param("ii", $userID, $approverID);
-                            if (!$stmt_insert_approver->execute()) {
-                                throw new Exception("Insert approver failed: " . $stmt_insert_approver->error);
-                            }
-                            $stmt_insert_approver->close();
-                        }
-                        $stmt_check->close();
-                    } else {
-                        throw new Exception("ApproverID ไม่พบสำหรับบทบาทนี้");
-                    }
-
-                    $stmt_update->close();
-
-                    header("Location: manage_approvers.php?success=แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+                    header("Location: manage_users.php?success=แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
                     exit();
                 } else {
                     $error = "เกิดข้อผิดพลาดในการแก้ไขข้อมูลผู้ใช้งาน: " . htmlspecialchars($stmt_update->error);
@@ -169,6 +126,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
 
     $conn->close();
 }
+
 ?>
 <!DOCTYPE html>
 <html lang="th">
@@ -266,9 +224,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                     <label for="role" class="form-label">ตำแหน่ง:</label>
                     <select id="role" name="role" class="form-select" required>
                         <option value="">-- เลือกตำแหน่ง --</option>
-                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>หัวหน้า
+                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>อธิบดี
                             (Director)</option>
+                        <option value="Leader" <?= ($user['Role'] === 'Leader') ? 'selected' : ''; ?>>หัวหน้า
+                            (Leader)</option>
                         <option value="Admin" <?= ($user['Role'] === 'Admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ (Admin)
+                        </option>
+                        <option value="Employee" <?= ($user['Role'] === 'Employee') ? 'selected' : ''; ?>>พนักงาน
+                            (Employee)
                         </option>
                     </select>
                 </div>
@@ -287,7 +250,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                 <button type="submit" name="update_user" class="btn btn-primary w-100">อัปเดตข้อมูล</button>
             </form>
-            <a href="manage_approvers.php" class="btn-back">ย้อนกลับไปที่จัดการผู้อนุมัติ</a>
+            <a href="manage_users.php" class="btn-back">ย้อนกลับ</a>
         </div>
     </div>
 

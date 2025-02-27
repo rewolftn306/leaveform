@@ -33,12 +33,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $remarks = sanitize_input($_POST['remarks']);
     $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;  // ตัวเลือกการแนบไฟล์หรือขอจัดส่ง
 
-    // รับ EmployeeID จาก Session
-    $employeeID = intval($_SESSION['UserID']);
+    // รับ UserID จาก Session
+    $userID = intval($_SESSION['UserID']);
 
-    // ตรวจสอบว่า EmployeeID มีอยู่ในตาราง employees หรือไม่
-    $stmt_check = $conn->prepare("SELECT EmployeeID FROM employees WHERE EmployeeID = ?");
-    $stmt_check->bind_param("i", $employeeID);
+    // ตรวจสอบว่า UserID มีอยู่ในตาราง users หรือไม่
+    $stmt_check = $conn->prepare("SELECT UserID FROM users WHERE UserID = ?");
+    $stmt_check->bind_param("i", $userID);
     $stmt_check->execute();
     $stmt_check->store_result();
     if ($stmt_check->num_rows === 0) {
@@ -94,7 +94,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // แทรกข้อมูลการลา
-    $sql = "INSERT INTO leaveapplications (EmployeeID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
+    $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
     $stmt = $conn->prepare($sql);
     if (!$stmt) {
         error_log("Prepare failed: " . $conn->error);
@@ -102,7 +102,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
-    $stmt->bind_param("iisssss", $employeeID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
+    $stmt->bind_param("iisssss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
 
     if ($stmt->execute()) {
         // ส่งข้อมูลไปยัง Google Chat Webhook หลังจากบันทึกข้อมูลในฐานข้อมูลสำเร็จ

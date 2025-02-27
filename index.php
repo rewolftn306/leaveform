@@ -39,12 +39,12 @@ if ($result->num_rows > 0) {
 
 $stmt->close();
 
-// คำสั่ง SQL สำหรับดึงข้อมูลการลา
-if ($role === 'Admin' || $role === 'Director') {
+// สำหรับ Admin หรือ Director
+if ($role === 'Admin' || $role === 'Director' || $role === 'Leader') {
     $sql = "SELECT u.UserID, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
             la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
             FROM users u
-            LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
+            LEFT JOIN leaveapplications la ON u.UserID = la.UserID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE la.LeaveTypeID IS NOT NULL
             ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
@@ -54,7 +54,7 @@ if ($role === 'Admin' || $role === 'Director') {
     $sql = "SELECT u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
             la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
             FROM users u
-            LEFT JOIN leaveapplications la ON u.UserID = la.EmployeeID
+            LEFT JOIN leaveapplications la ON u.UserID = la.UserID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL
             ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
@@ -62,6 +62,7 @@ if ($role === 'Admin' || $role === 'Director') {
     $stmt->bind_param("s", $user_name);
     $stmt->execute();
 }
+
 
 
 $result = $stmt->get_result();
@@ -178,8 +179,10 @@ $chartValues = json_encode(array_values($chartData));
 
         .chart-container {
             display: flex;
-            justify-content: center; /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวนอน */
-            align-items: center; /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวตั้ง */
+            justify-content: center;
+            /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวนอน */
+            align-items: center;
+            /* จัดตำแหน่งกราฟให้อยู่ตรงกลางแนวตั้ง */
             width: 105%;
             padding: 0 10px;
         }
@@ -256,6 +259,9 @@ $chartValues = json_encode(array_values($chartData));
                                 echo 'พนักงาน';
                                 break;
                             case 'Director':
+                                echo 'อธิบดี';
+                                break;
+                            case 'Leader':
                                 echo 'หัวหน้า';
                                 break;
                             case 'Admin':
@@ -272,7 +278,7 @@ $chartValues = json_encode(array_values($chartData));
                 <?php if ($role === 'Employee'): ?>
                     <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
                 <?php endif; ?>
-                <?php if ($role === 'Director' || $role === 'Admin'): ?>
+                <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
                 <?php endif; ?>
                 <?php if ($role === 'Admin'): ?>
@@ -295,7 +301,7 @@ $chartValues = json_encode(array_values($chartData));
         <div class="table-container">
             <h3 class="text-center">
                 <?php
-                if ($role === 'Admin' || $role === 'Director') {
+                if ($role === 'Admin' || $role === 'Director' || $role === 'Leader') {
                     echo 'ตารางการลางานของลูกจ้าง';
                 } else {
                     echo 'ตารางการลางาน';
@@ -379,12 +385,12 @@ $chartValues = json_encode(array_values($chartData));
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-        <script>
-            const chartColors = [
-                '#4a90e2', '#8bc34a', '#9e9e9e', '#003366', '#ffcc00', // 5 สีแรก
-                '#66bb6a', '#d32f2f', '#0288d1', '#7b1fa2', '#fbc02d', // 5 สีถัดไป
-                '#c2185b', '#1976d2'  // 2 สีสุดท้าย
-            ];
+    <script>
+        const chartColors = [
+            '#4a90e2', '#8bc34a', '#9e9e9e', '#003366', '#ffcc00', // 5 สีแรก
+            '#66bb6a', '#d32f2f', '#0288d1', '#7b1fa2', '#fbc02d', // 5 สีถัดไป
+            '#c2185b', '#1976d2'  // 2 สีสุดท้าย
+        ];
 
 
         // การแสดงกราฟ
@@ -423,10 +429,10 @@ $chartValues = json_encode(array_values($chartData));
                     },
                     tooltip: {
                         callbacks: {
-                            title: function(tooltipItem) {
+                            title: function (tooltipItem) {
                                 return tooltipItem[0].label;
                             },
-                            label: function(tooltipItem) {
+                            label: function (tooltipItem) {
                                 return tooltipItem.raw + ' วัน';
                             }
                         }
@@ -453,65 +459,65 @@ $chartValues = json_encode(array_values($chartData));
             legendItem.appendChild(label);
             legendContainer.appendChild(legendItem);
         });
-        
+
     </script>
     <script>
         document.addEventListener("DOMContentLoaded", function () {
-    var leaveDetailModal = document.getElementById('leaveDetailModal');
+            var leaveDetailModal = document.getElementById('leaveDetailModal');
 
-    if (leaveDetailModal) {
-        // เมื่อ Modal เปิดขึ้น
-        leaveDetailModal.addEventListener('show.bs.modal', function (event) {
-            var button = event.relatedTarget;
-            var name = button.getAttribute('data-name');
-            var start = button.getAttribute('data-start');
-            var end = button.getAttribute('data-end');
-            var leaveType = button.getAttribute('data-leave-type');
-            var status = button.getAttribute('data-status');
-            var remarks = button.getAttribute('data-remarks');
-            var applicationId = button.getAttribute('data-application-id');
+            if (leaveDetailModal) {
+                // เมื่อ Modal เปิดขึ้น
+                leaveDetailModal.addEventListener('show.bs.modal', function (event) {
+                    var button = event.relatedTarget;
+                    var name = button.getAttribute('data-name');
+                    var start = button.getAttribute('data-start');
+                    var end = button.getAttribute('data-end');
+                    var leaveType = button.getAttribute('data-leave-type');
+                    var status = button.getAttribute('data-status');
+                    var remarks = button.getAttribute('data-remarks');
+                    var applicationId = button.getAttribute('data-application-id');
 
-            // ใส่ค่าลงใน Modal
-            document.getElementById('modal-leave-type').textContent = leaveType;
-            document.getElementById('modal-start-date').textContent = start;
-            document.getElementById('modal-end-date').textContent = end;
-            document.getElementById('modal-status').textContent = status;
-            document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
+                    // ใส่ค่าลงใน Modal
+                    document.getElementById('modal-leave-type').textContent = leaveType;
+                    document.getElementById('modal-start-date').textContent = start;
+                    document.getElementById('modal-end-date').textContent = end;
+                    document.getElementById('modal-status').textContent = status;
+                    document.getElementById('modal-remarks').textContent = remarks ? remarks : 'ไม่มี';
 
-            var cancelLeaveButton = document.getElementById('cancelLeaveButton');
-            var printDocumentButton = document.getElementById('printDocumentButton');
+                    var cancelLeaveButton = document.getElementById('cancelLeaveButton');
+                    var printDocumentButton = document.getElementById('printDocumentButton');
 
-            // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
-            if (status === 'รออนุมัติ') {
-                cancelLeaveButton.style.display = 'inline-block';
-                cancelLeaveButton.setAttribute('data-application-id', applicationId);
-            } else {
-                cancelLeaveButton.style.display = 'none';
+                    // ถ้า "รออนุมัติ" ให้แสดงปุ่มยกเลิก
+                    if (status === 'รออนุมัติ') {
+                        cancelLeaveButton.style.display = 'inline-block';
+                        cancelLeaveButton.setAttribute('data-application-id', applicationId);
+                    } else {
+                        cancelLeaveButton.style.display = 'none';
+                    }
+
+                    // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
+                    printDocumentButton.setAttribute('data-application-id', applicationId);
+                });
+
+                // ฟังก์ชันปุ่ม "ยกเลิกการลา"
+                document.getElementById('cancelLeaveButton').addEventListener('click', function () {
+                    var applicationId = this.getAttribute('data-application-id');
+                    if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
+                        window.location.href = 'cancel_leave.php?id=' + applicationId;
+                    }
+                });
+
+                // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
+                document.getElementById('printDocumentButton').addEventListener('click', function () {
+                    var applicationId = this.getAttribute('data-application-id');
+                    if (applicationId) {
+                        window.location.href = 'generate_pdf.php?id=' + applicationId;
+                    } else {
+                        alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
+                    }
+                });
             }
-
-            // กำหนด application ID สำหรับปุ่มพิมพ์ PDF
-            printDocumentButton.setAttribute('data-application-id', applicationId);
         });
-
-        // ฟังก์ชันปุ่ม "ยกเลิกการลา"
-        document.getElementById('cancelLeaveButton').addEventListener('click', function () {
-            var applicationId = this.getAttribute('data-application-id');
-            if (confirm("คุณต้องการยกเลิกการลานี้ใช่หรือไม่?")) {
-                window.location.href = 'cancel_leave.php?id=' + applicationId;
-            }
-        });
-
-        // ฟังก์ชันปุ่ม "พิมพ์ PDF" ใน Modal
-        document.getElementById('printDocumentButton').addEventListener('click', function () {
-            var applicationId = this.getAttribute('data-application-id');
-            if (applicationId) {
-                window.location.href = 'generate_pdf.php?id=' + applicationId;
-            } else {
-                alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
-            }
-        });
-    }
-});
 
     </script>
 
