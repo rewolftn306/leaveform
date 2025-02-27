@@ -151,7 +151,8 @@ if (isset($_GET['success'])) {
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
-                <button type="submit" class="btn btn-primary w-100">ส่งข้อมูล</button>
+                <button type="submit" class="btn btn-primary w-100">บันทึก</button>
+                
             </form>
             <a href="index.php" class="btn btn-danger mt-3 w-100">ย้อนกลับ</a>
         </div>

@@ -307,6 +307,9 @@ $conn->close();
                                         default:
                                             echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
                                     } ?>
+                                    <a href="view_pdf.php?id=<?= $leave['ApplicationID']; ?>" class="btn btn-primary btn-sm">
+                                    พิมพ์ PDF
+                                </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

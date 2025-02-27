@@ -341,7 +341,7 @@ $chartValues = json_encode(array_values($chartData));
                                     </button>
                                 </td>
                                 <td>
-                                    <a href="generate_pdf.php?id=<?= $row['application_id']; ?>" class="btn btn-primary">พิมพ์
+                                    <a href="view_pdf.php?id=<?= $row['application_id']; ?>" class="btn btn-primary">พิมพ์
                                         PDF</a>
                                 </td>
                             </tr>
@@ -511,7 +511,7 @@ $chartValues = json_encode(array_values($chartData));
                 document.getElementById('printDocumentButton').addEventListener('click', function () {
                     var applicationId = this.getAttribute('data-application-id');
                     if (applicationId) {
-                        window.location.href = 'generate_pdf.php?id=' + applicationId;
+                        window.location.href = 'view_pdf.php?id=' + applicationId;
                     } else {
                         alert("ไม่พบข้อมูลสำหรับพิมพ์เอกสาร");
                     }

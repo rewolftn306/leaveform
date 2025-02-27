@@ -332,6 +332,20 @@ switch ($leaveType) {
 }
 
 
-// Output PDF to browser
-$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
+// Get the content of PDF in memory as binary data
+$pdfData = $pdf->Output('S');
+
+// Update the database with the PDF file data
+include('connect.php');
+$stmt = $conn->prepare("UPDATE leaveapplications SET PDFFile = ? WHERE ApplicationID = ?");
+$stmt->bind_param("bi", $null, $applicationId);
+
+// For BLOB data, we use null as placeholder and then send the binary content
+$stmt->send_long_data(0, $pdfData); // Send the binary PDF data
+$stmt->execute();
+$stmt->close();
+$conn->close();
+
+// Display success message and redirect to index.php
+echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
 ?>
