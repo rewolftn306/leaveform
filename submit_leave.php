@@ -20,6 +20,31 @@ function sanitize_input($data)
     return htmlspecialchars(stripslashes(trim($data)));
 }
 
+// ฟังก์ชันสำหรับส่งข้อความไปยัง Google Chat ผ่าน Webhook
+function sendGoogleChatNotification($message) {
+    $webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAaBCuirU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=B4GrHde2cf_gpcXXLc6mS6FmNuvvsxdTIJYXnj4btEY';  // ใส่ URL Webhook ที่ได้จาก Google Chat
+
+    $data = [
+        'text' => $message
+    ];
+
+    $options = [
+        'http' => [
+            'header'  => "Content-type: application/json\r\n",
+            'method'  => 'POST',
+            'content' => json_encode($data)
+        ]
+    ];
+
+    $context  = stream_context_create($options);
+    $result = file_get_contents($webhookUrl, false, $context);
+
+    if ($result === FALSE) {
+        // Handle error
+        error_log('Error sending Google Chat notification');
+    }
+}
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ตรวจสอบ CSRF Token
     if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
@@ -107,7 +132,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($stmt->execute()) {
         // หลังจากบันทึกข้อมูลเสร็จ จะส่งไปที่หน้า generate_pdf.php พร้อมกับ application_id
         $application_id = $stmt->insert_id; // รับค่า application_id ที่บันทึก
-        header("Location: generate_pdf.php?id=" . $application_id); // ส่งผู้ใช้ไปที่หน้า generate_pdf.php
+
+        // สร้างข้อความสำหรับการแจ้งเตือน
+        $message = "มีการขอลาใหม่จากผู้ใช้งาน: \n" .
+                   "ชื่อ: " . htmlspecialchars($_SESSION['FirstName'] . ' ' . $_SESSION['LastName']) . "\n" .
+                   "ประเภทการลา: " . htmlspecialchars($leaveTypeName) . "\n" .
+                   "วันที่เริ่มลา: " . htmlspecialchars($startDate) . "\n" .
+                   "วันที่สิ้นสุดการลา: " . htmlspecialchars($endDate) . "\n" .
+                   "เหตุผลการลา: " . htmlspecialchars($remarks) . "\n" .
+                   "สถานะการอนุมัติ: รอการอนุมัติ";
+
+        // ส่งข้อความไปยัง Google Chat
+        sendGoogleChatNotification($message);
+
+        // เปลี่ยนเส้นทางไปยังหน้า generate_pdf.php
+        header("Location: generate_pdf.php?id=" . $application_id);
         exit();
     } else {
         error_log("Execute failed: " . $stmt->error);

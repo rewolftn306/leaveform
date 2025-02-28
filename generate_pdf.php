@@ -18,7 +18,7 @@ include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
 $stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, 
-                               u.Position, u.Department, u.Tel, u.CreatedAt, la.CreateDate
+                               u.Position, u.Department, u.Tel, u.CreatedAt, la.CreateDate, u.Signature
                         FROM leaveapplications la 
                         JOIN users u ON la.UserID = u.UserID
                         LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
@@ -179,6 +179,8 @@ switch ($leaveType) {
         $pdf->SetXY(148, 107.75);
         $pdf->Write(0, convertThai('' . $leaveData['Tel']));
         $pdf->SetXY(56, 56.75);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . '  ' . $leaveData['LastName']));
+        $pdf->SetXY(128, 137.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . '  ' . $leaveData['LastName']));
         $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
         $pdf->SetXY(175, 88.5);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
@@ -348,4 +350,8 @@ $conn->close();
 
 // Display success message and redirect to index.php
 echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
+
+
+//for debug
+// $pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>

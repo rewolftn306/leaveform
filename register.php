@@ -30,6 +30,30 @@ if (empty($_SESSION['csrf_token'])) {
             box-shadow: 0 5px 10px rgba(0, 0, 0, 0.1);
         }
     </style>
+    <style>
+        .canvas-container {
+            position: relative;
+            width: 100%;
+            max-width: 100%;
+            background-color: #f7f7f7;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        #signatureCanvas {
+            width: 100%;
+            height: 100%;
+            border-radius: 8px;
+        }
+
+        .btn-outline-secondary {
+            padding: 5px 15px;
+        }
+
+        .text-muted {
+            font-size: 0.9rem;
+        }
+    </style>
+
 </head>
 
 <body>
@@ -89,12 +113,29 @@ if (empty($_SESSION['csrf_token'])) {
                     <label for="tel" class="form-label">โทรศัพท์</label>
                     <input type="text" id="tel" name="tel" class="form-control">
                 </div>
-
                 <div class="mb-3">
                     <label for="profile_picture" class="form-label">โปรไฟล์รูปภาพ</label>
                     <input type="file" id="profile_picture" name="profile_picture" class="form-control" accept="image/*"
                         required>
                 </div>
+                <div class="mb-3">
+                    <label for="signature" class="form-label">กรุณากรอกลายเซ็น</label>
+                    <div class="canvas-container">
+                        <canvas id="signatureCanvas" width="400" height="200"
+                            style="border: 2px dashed #ccc; border-radius: 10px;"></canvas>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <button type="button" class="btn btn-outline-secondary" id="clearCanvas">ล้างลายเซ็น</button>
+                        <span class="text-muted" id="clearMessage" style="display: none;">ลายเซ็นถูกล้างแล้ว</span>
+                    </div>
+                    <input type="hidden" name="signature_data" id="signature_data">
+                </div>
+                <div class="mb-3">
+                    <label for="signature_image" class="form-label">หรืออัปโหลดลายเซ็น</label>
+                    <input type="file" class="form-control" name="signature_image" id="signature_image"
+                        accept="image/*">
+                </div>
+
 
                 <!-- ใส่ CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= htmlspecialchars($_SESSION['csrf_token']); ?>">
@@ -109,6 +150,46 @@ if (empty($_SESSION['csrf_token'])) {
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // ฟังก์ชันในการเริ่มต้นการวาด
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        // ฟังก์ชันในการลาก
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+
+        // ฟังก์ชันในการหยุดการวาด
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        // ฟังก์ชันในการเคลียร์ canvas
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('signature_data').value = ''; // ลบข้อมูล base64
+            document.getElementById('clearMessage').style.display = 'inline'; // แสดงข้อความล้างลายเซ็น
+        });
+
+        // เมื่อฟอร์มถูกส่ง จะทำการแปลง canvas เป็น base64
+        document.querySelector('form').addEventListener('submit', () => {
+            const signatureData = canvas.toDataURL();
+            document.getElementById('signature_data').value = signatureData;
+        });
+    </script>
+
+
 </body>
 
 </html>
