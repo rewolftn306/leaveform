@@ -106,6 +106,8 @@ if (empty($_SESSION['csrf_token'])) {
                         <option value="">-- เลือกตำแหน่ง --</option>
                         <option value="Director">อธิบดี (Director)</option>
                         <option value="Leader">หัวหน้า (Leader)</option>
+                        <option value="Leader2">หัวหน้า (Leader2)</option>
+                        <option value="Leader3">หัวหน้า (Leader3)</option>
                         <option value="Admin">ผู้ดูแลระบบ (Admin)</option>
                         <option value="Employee">พนักงาน (Employee)</option>
                     </select>

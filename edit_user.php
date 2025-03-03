@@ -60,7 +60,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
         $error = "กรุณากรอกข้อมูลให้ครบถ้วน";
     } else {
         // จำกัดบทบาทที่ Admin สามารถตั้งได้
-        $allowed_roles = ['Director', 'Leader', 'Admin', 'Employee'];
+        $allowed_roles = ['Director', 'Leader', 'Leader2', 'Leader3', 'Admin', 'Employee'];
         if (!in_array($role, $allowed_roles)) {
             $error = "ไม่สามารถตั้งบทบาทนี้ได้";
         } else {
@@ -228,6 +228,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                             (Director)</option>
                         <option value="Leader" <?= ($user['Role'] === 'Leader') ? 'selected' : ''; ?>>หัวหน้า
                             (Leader)</option>
+                        <option value="Leader2" <?= ($user['Role'] === 'Leader2') ? 'selected' : ''; ?>>หัวหน้า2
+                            (Leader2)</option>
+                        <option value="Leader3" <?= ($user['Role'] === 'Leader3') ? 'selected' : ''; ?>>หัวหน้า3
+                            (Leader3)</option>
                         <option value="Admin" <?= ($user['Role'] === 'Admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ (Admin)
                         </option>
                         <option value="Employee" <?= ($user['Role'] === 'Employee') ? 'selected' : ''; ?>>พนักงาน

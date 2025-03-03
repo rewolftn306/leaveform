@@ -9,7 +9,7 @@ if (!isset($_SESSION['Username'])) {
 }
 
 // ตรวจสอบบทบาทของผู้ใช้
-$allowed_roles = ['Director', 'Leader', 'Admin'];
+$allowed_roles = ['Director','Leader' ,'Leader2','Leader3', 'Admin' ];
 if (!in_array($_SESSION['Role'], $allowed_roles)) {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
 }
@@ -307,9 +307,6 @@ $conn->close();
                                         default:
                                             echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
                                     } ?>
-                                    <a href="view_pdf.php?id=<?= $leave['ApplicationID']; ?>" class="btn btn-primary btn-sm">
-                                    พิมพ์ PDF
-                                </a>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

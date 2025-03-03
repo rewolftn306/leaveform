@@ -40,7 +40,7 @@ if ($result->num_rows > 0) {
 $stmt->close();
 
 // สำหรับ Admin หรือ Director
-if ($role === 'Admin' || $role === 'Director' || $role === 'Leader') {
+if ($role === 'Admin' || $role === 'Director' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3') {
     $sql = "SELECT u.UserID, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') AS leave_type, 
             la.StartDate, la.EndDate, la.ApprovalStatus, la.Remarks, la.ApplicationID 
             FROM users u
@@ -264,6 +264,12 @@ $chartValues = json_encode(array_values($chartData));
                             case 'Leader':
                                 echo 'หัวหน้า';
                                 break;
+                            case 'Leader2':
+                                echo 'หัวหน้า2';
+                                break;
+                            case 'Leader3':
+                                echo 'หัวหน้า3';
+                                break;
                             case 'Admin':
                                 echo 'ผู้ดูแลระบบ';
                                 break;
@@ -278,7 +284,7 @@ $chartValues = json_encode(array_values($chartData));
                 <?php if ($role === 'Employee'): ?>
                     <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
                 <?php endif; ?>
-                <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader'): ?>
+                <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
                 <?php endif; ?>
                 <?php if ($role === 'Admin'): ?>
@@ -301,7 +307,7 @@ $chartValues = json_encode(array_values($chartData));
         <div class="table-container">
             <h3 class="text-center">
                 <?php
-                if ($role === 'Admin' || $role === 'Director' || $role === 'Leader') {
+                if ($role === 'Admin' || $role === 'Director' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3') {
                     echo 'ตารางการลางานของลูกจ้าง';
                 } else {
                     echo 'ตารางการลางาน';

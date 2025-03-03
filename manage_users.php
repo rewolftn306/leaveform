@@ -117,6 +117,7 @@ $conn->close();
     <div class="container manage-container">
         <h2 class="mb-4">จัดการผู้ใช้งาน</h2>
         <a href="create_user.php" class="btn btn-primary mb-3">สร้างบัญชีผู้ใช้งานใหม่</a>
+        <a href="user_information.php" class="btn btn-secondary mb-3">สรุปการลา</a> <!-- New button here -->
         <div class="table-responsive table-container">
             <table class="table table-bordered table-striped">
                 <thead class="table-dark">

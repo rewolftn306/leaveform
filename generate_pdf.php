@@ -31,8 +31,6 @@ if ($result->num_rows == 0) {
 }
 $leaveData = $result->fetch_assoc();
 $stmt->close();
-$conn->close();
-
 
 // Determine the correct template based on leave type
 $leaveType = $leaveData['leave_type'];
@@ -88,11 +86,6 @@ try {
 }
 
 $pdf->SetTextColor(0, 0, 0);
-
-$signaturePath = 'signature/1.jpg';  // เปลี่ยนชื่อไฟล์ลายเซ็นต์ให้ตรง
-$signatureWidth = 30;  // ความกว้างของลายเซ็นต์
-$signatureHeight = 10;  // ความสูงของลายเซ็นต์
-
 
 // Function to handle Thai encoding
 function convertThai($text)
@@ -157,6 +150,38 @@ function calculateLeaveDays($startDate, $endDate)
     return $diffInDays;
 }
 
+// ดึงข้อมูลลายเซ็นจากฐานข้อมูล
+$stmt = $conn->prepare("SELECT Signature FROM users WHERE UserID = ?");
+$stmt->bind_param("i", $leaveData['UserID']);
+$stmt->execute();
+$stmt->bind_result($signatureBlob);
+$stmt->fetch();
+$stmt->close();
+
+// ตรวจสอบและแยก base64 ออกจาก MIME type
+if (strpos($signatureBlob, 'data:image/') === 0) {
+    // ตัดส่วน MIME type ออก
+    $signatureBlob = substr($signatureBlob, strpos($signatureBlob, ",") + 1);
+}
+
+// ตรวจสอบว่า base64 ถูกต้องหรือไม่
+if (base64_decode($signatureBlob, true) === false) {
+    die("ข้อมูลลายเซ็นไม่ถูกต้อง");
+}
+
+// แปลงข้อมูล base64 เป็นข้อมูลภาพ
+$signatureImageData = base64_decode($signatureBlob);
+
+// สร้างไฟล์ชั่วคราวสำหรับลายเซ็น
+$tempImageFile = tempnam(sys_get_temp_dir(), 'signature_') . '.png';  // ใช้ .png หรือ .jpg ตามประเภทของไฟล์ที่คุณใช้
+
+// เขียนข้อมูล base64 ลงในไฟล์ภาพชั่วคราว
+file_put_contents($tempImageFile, $signatureImageData);
+
+// กำหนดขนาดของลายเซ็น
+$signatureWidth = 30;  // ความกว้าง
+$signatureHeight = 10; // ความสูง
+
 // Insert data based on the template
 switch ($leaveType) {
     case 'ลาป่วย':
@@ -185,7 +210,7 @@ switch ($leaveType) {
         $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
         $pdf->SetXY(175, 88.5);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
         $pdf->Write(0, convertThai($leaveDays . ' '));
-        $pdf->Image($signaturePath, 130, 122, $signatureWidth, $signatureHeight);
+        $pdf->Image($tempImageFile, 135, 123, $signatureWidth, $signatureHeight);
 
         switch ($leaveType) {
             case 'ลาป่วย':
@@ -333,8 +358,9 @@ switch ($leaveType) {
         break;
 }
 
-
-// Get the content of PDF in memory as binary data
+// ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
+unlink($tempImageFile);
+//Get the content of PDF in memory as binary data
 $pdfData = $pdf->Output('S');
 
 // Update the database with the PDF file data
@@ -351,7 +377,6 @@ $conn->close();
 // Display success message and redirect to index.php
 echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
 
-
 //for debug
-// $pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
+//$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>
