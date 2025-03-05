@@ -84,66 +84,205 @@ if (isset($_GET['user_id'])) {
 
     // Get all leave records for the selected user
     $sql = "SELECT 
-                la.ApplicationID, 
-                la.LeaveTypeID, 
-                la.StartDate, 
-                la.EndDate, 
-                la.ApprovalStatus, 
-                la.Remarks, 
-                lt.LeaveName
-            FROM leaveapplications la
-            JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
-            WHERE la.UserID = ?";
+            u.UserID, 
+            u.FirstName, 
+            u.LastName, 
+            lt.LeaveName, 
+            la.StartDate, 
+            la.EndDate, 
+            la.ApprovalStatus, 
+            la.Remarks, 
+            la.ApplicationID
+        FROM users u
+        LEFT JOIN leaveapplications la ON u.UserID = la.UserID
+        LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
+        WHERE u.UserID = ?
+        ORDER BY la.StartDate DESC"; // เรียงลำดับตามวันที่เริ่มต้นของการลา
 
     $stmt = $conn->prepare($sql);
     $stmt->bind_param('i', $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
+        // คำนวณจำนวนวันลา
+        $start_date = new DateTime($row['StartDate']);
+        $end_date = new DateTime($row['EndDate']);
+        $interval = $start_date->diff($end_date);
+        $leave_days = $interval->days;
+
+        // หากวันที่เริ่มต้นและสิ้นสุดตรงกัน ให้ถือว่าเป็น 1 วัน
+        if ($start_date == $end_date) {
+            $leave_days = 1;
+        }
+
+        // เพิ่มข้อมูลการลาเข้าไปใน $leave_records
+        $row['leave_days'] = $leave_days;
         $leave_records[] = $row;
     }
     $stmt->close();
 }
 
-// Fetch leave conditions
+// Fetch leave types
+$leave_types = [];
+$sql_leave_types = "SELECT LeaveTypeID, LeaveName FROM leavetypes";
+$result_leave_types = $conn->query($sql_leave_types);
+while ($row = $result_leave_types->fetch_assoc()) {
+    $leave_types[$row['LeaveTypeID']] = $row['LeaveName'];
+}
+
+// Fetch leave conditions for all leave types
 $leave_conditions = [];
 $sql_conditions = "SELECT * FROM leaveconditions";
 $conditions_result = $conn->query($sql_conditions);
 while ($row = $conditions_result->fetch_assoc()) {
-    // ตรวจสอบว่า $row['LeaveTypeID'] ถูกต้องหรือไม่ ก่อนที่จะใช้เป็นคีย์
     if (!isset($leave_conditions[$row['LeaveTypeID']])) {
         $leave_conditions[$row['LeaveTypeID']] = [];
     }
     $leave_conditions[$row['LeaveTypeID']][] = $row;
 }
 
-// คำนวณสถานะการได้รับค่าจ้าง
-function calculateStatus($leave_type, $days, $leave_conditions) {
-    $status = 'ไม่ได้รับค่าจ้าง'; // Default status
+// ฟังก์ชันคำนวณสถานะการได้รับค่าจ้าง
+function calculateStatus($leave_type, $days, $notRecovered)
+{
+    $status = 'ไม่ได้รับค่าจ้าง'; // ค่าเริ่มต้น
 
-    // ตรวจสอบว่า leave_conditions[$leave_type] มีข้อมูลหรือไม่
-    if (isset($leave_conditions[$leave_type]) && is_array($leave_conditions[$leave_type])) {
-        foreach ($leave_conditions[$leave_type] as $condition) {
-            if (strpos($condition['ConditionDescription'], 'ได้รับค่าจ้าง') !== false) {
-                // ตรวจสอบเงื่อนไขสำหรับการได้รับค่าจ้าง
-                if ($days <= 60) {
-                    $status = 'ได้รับค่าจ้าง';
-                } else {
-                    $status = 'ไม่ได้รับค่าจ้าง';
-                }
+    // Logic for each leave type
+    switch ($leave_type) {
+        case 'ลาป่วย':  // Sick Leave
+            $yearLimit = 1;
+            $leaveLimit = 60;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } elseif ($notRecovered && $days <= $leaveLimit + 60) {
+                $status = 'ได้รับค่าจ้าง';
+            } elseif ($days > 120) {
+                $status = 'ไม่ได้รับค่าจ้าง';
             }
-        }
+            break;
+
+        case 'ลากิจส่วนตัว':  // Personal Leave
+            $yearLimit = 1;
+            $leaveLimit = 30;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาพักผ่อน':  // Vacation Leave
+            $yearLimit = 1;
+            $leaveLimit = 15;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาบวช':  // Ordination Leave
+            $yearLimit = 1;
+            $leaveLimit = 90;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาไปถือศีลและปฏิบัติธรรม':  // Meditation Leave
+            $yearLimit = 1;
+            $leaveLimit = 60;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':  // Military Leave
+            $yearLimit = 1;
+            $leaveLimit = 30;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาดูแลบิดาหรือมารดา':  // Parent Care Leave
+            $yearLimit = 1;
+            $leaveLimit = 30;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'การลาคลอดบุตร':  // Childbirth Leave
+            $yearLimit = 1;
+            $leaveLimit = 90;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'การลากิจเพื่อเลี้ยงดูบุตร':  // Childcare Leave
+            $yearLimit = 1;
+            $leaveLimit = 90;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาสมรส':  // Marriage Leave
+            $yearLimit = 1;
+            $leaveLimit = 7;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาพักผ่อนไปต่างประเทศ':  // Foreign Vacation Leave
+            $yearLimit = 1;
+            $leaveLimit = 30;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        case 'ลาติดตามคู่สมรส':  // Spouse Follow Leave
+            $yearLimit = 1;
+            $leaveLimit = 30;
+            if ($days <= $leaveLimit) {
+                $status = 'ได้รับค่าจ้าง';
+            } else {
+                $status = 'ไม่ได้รับค่าจ้าง';
+            }
+            break;
+
+        default:
+            $status = 'ไม่ได้รับค่าจ้าง';  // Default case if leave type is not recognized
+            break;
     }
+
     return $status;
 }
 
-
-// Move the database connection close here, after all queries have been executed.
-$conn->close();
 ?>
 
 <!DOCTYPE html>
 <html lang="th">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -151,8 +290,8 @@ $conn->close();
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 </head>
-<body>
 
+<body>
     <!-- Header -->
     <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
         <div class="container-fluid">
@@ -168,8 +307,6 @@ $conn->close();
 
     <!-- Main Container -->
     <div class="container mt-5">
-
-        <!-- Search and Filter Form -->
         <form method="GET" style="margin-top: 70px;">
             <div class="row mb-3">
                 <div class="col-md-4">
@@ -193,7 +330,6 @@ $conn->close();
             </div>
         </form>
 
-        <!-- Leaves Table -->
         <div class="table-responsive">
             <table class="table table-striped table-bordered">
                 <thead class="table-dark">
@@ -216,33 +352,46 @@ $conn->close();
                                 <td><?= htmlspecialchars($user['Position']); ?></td>
                                 <td>
                                     <?php
-                                    // คำนวณจำนวนวันลาในแต่ละประเภทจาก $leave_records
-                                    $leave_data = [
-                                        'sickLeave' => 0,
-                                        'personalLeave' => 0,
-                                        'vacationLeave' => 0,
-                                        'otherLeave' => 0
-                                    ];
+                                    // ดึงข้อมูลการลาจากฐานข้อมูล
+                                    $leave_data = [];
+                                    foreach ($leave_types as $leave_type_id => $leave_name) {
+                                        $leave_data[$leave_name] = 0;  // Initialize leave data
+                                    }
 
-                                    foreach ($leave_records as $leave) {
+                                    // ดึงข้อมูลการลาของผู้ใช้งาน
+                                    $sql = "SELECT LeaveTypeID, StartDate, EndDate FROM leaveapplications WHERE UserID = ?";
+                                    $stmt = $conn->prepare($sql);
+                                    $stmt->bind_param("i", $user['UserID']);  // $user_id คือ ID ของผู้ใช้
+                                    $stmt->execute();
+                                    $result = $stmt->get_result();
+
+                                    while ($leave = $result->fetch_assoc()) {
                                         $startDate = new DateTime($leave['StartDate']);
                                         $endDate = new DateTime($leave['EndDate']);
                                         $diff = $startDate->diff($endDate);
                                         $leave_days = $diff->days;
 
-                                        // Update leave type count
+                                        // เพิ่มจำนวนวันลาตามประเภทที่ตรงกับ LeaveTypeID
                                         switch ($leave['LeaveTypeID']) {
-                                            case 1: // ลาป่วย
-                                                $leave_data['sickLeave'] += $leave_days;
+                                            case 1:  // ลาป่วย
+                                                $leave_data['ลาป่วย'] += $leave_days;
                                                 break;
-                                            case 2: // ลากิจส่วนตัว
-                                                $leave_data['personalLeave'] += $leave_days;
+                                            case 2:  // ลากิจส่วนตัว
+                                                $leave_data['ลากิจส่วนตัว'] += $leave_days;
                                                 break;
-                                            case 3: // ลาพักผ่อน
-                                                $leave_data['vacationLeave'] += $leave_days;
+                                            case 3:  // ลาพักผ่อน
+                                                $leave_data['ลาพักผ่อน'] += $leave_days;
                                                 break;
-                                            default: // ประเภทการลาอื่นๆ
-                                                $leave_data['otherLeave'] += $leave_days;
+                                            case 4:  // ลาบวช
+                                                $leave_data['ลาบวช'] += $leave_days;
+                                                break;
+                                            case 5:  // ลาไปถือศีล
+                                                $leave_data['ลาไปถือศีล'] += $leave_days;
+                                                break;
+                                            case 6:  // ลาเข้ารับการตรวจเลือก
+                                                $leave_data['ลาเข้ารับการตรวจเลือก'] += $leave_days;
+                                                break;
+                                            default:
                                                 break;
                                         }
                                     }
@@ -250,32 +399,17 @@ $conn->close();
                                     // คำนวณสถานะการได้รับค่าจ้าง
                                     $status = 'ไม่ได้รับค่าจ้าง';  // Default status
                                     foreach ($leave_data as $leave_type => $days) {
-                                        $leave_type_id = 0;
-                                        switch ($leave_type) {
-                                            case 'sickLeave':
-                                                $leave_type_id = 1;
-                                                break;
-                                            case 'personalLeave':
-                                                $leave_type_id = 2;
-                                                break;
-                                            case 'vacationLeave':
-                                                $leave_type_id = 3;
-                                                break;
-                                        }
-
-                                        // คำนวณสถานะการได้รับค่าจ้างจากเงื่อนไข
-                                        $status = calculateStatus($leave_type_id, $days, $leave_conditions);
+                                        $status = calculateStatus($leave_type, $days, true);  // สมมติว่าผู้ใช้งานยังไม่หายป่วย
                                     }
                                     ?>
-                                    <span><?= "ลาป่วย: " . $leave_data['sickLeave'] . " วัน"; ?></span><br>
-                                    <span><?= "ลากิจส่วนตัว: " . $leave_data['personalLeave'] . " วัน"; ?></span><br>
-                                    <span><?= "ลาพักผ่อน: " . $leave_data['vacationLeave'] . " วัน"; ?></span><br>
+                                    <span><?= "ลาป่วย: " . $leave_data['ลาป่วย'] . " วัน"; ?></span><br>
+                                    <span><?= "ลากิจส่วนตัว: " . $leave_data['ลากิจส่วนตัว'] . " วัน"; ?></span><br>
+                                    <span><?= "ลาพักผ่อน: " . $leave_data['ลาพักผ่อน'] . " วัน"; ?></span><br>
                                     <span>สถานะการได้รับค่าจ้าง: <?= $status; ?></span>
                                 </td>
                                 <td>
                                     <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#remarkModal<?= $user['UserID']; ?>"
-                                        data-userid="<?= $user['UserID']; ?>">
+                                        data-bs-target="#remarkModal<?= $user['UserID']; ?>" data-userid="<?= $user['UserID']; ?>">
                                         ดูรายละเอียด
                                     </button>
                                     <!-- Modal for User Profile and Leave Details -->
@@ -284,44 +418,59 @@ $conn->close();
                                         <div class="modal-dialog modal-lg">
                                             <div class="modal-content">
                                                 <div class="modal-header">
-                                                    <h5 class="modal-title" id="remarkModalLabel<?= $user['UserID']; ?>">รายละเอียดการลา</h5>
+                                                    <h5 class="modal-title" id="remarkModalLabel<?= $user['UserID']; ?>">
+                                                        รายละเอียดการลา</h5>
                                                     <button type="button" class="btn-close" data-bs-dismiss="modal"
                                                         aria-label="Close"></button>
                                                 </div>
                                                 <div class="modal-body">
-                                                    <h6>ชื่อ: <?= htmlspecialchars($user['FirstName'] . ' ' . $user['LastName']); ?></h6>
+                                                    <h6>ชื่อ:
+                                                        <?= htmlspecialchars($user['FirstName'] . ' ' . $user['LastName']); ?>
+                                                    </h6>
                                                     <p>ตำแหน่ง: <?= htmlspecialchars($user['Position']); ?></p>
                                                     <!-- Leave Type Pie Chart -->
-                                                    <canvas id="leaveChart<?= $user['UserID']; ?>" width="200" height="200"></canvas>
+                                                    <canvas id="leaveChart<?= $user['UserID']; ?>" width="200"
+                                                        height="200"></canvas>
                                                     <script>
                                                         var leaveData = {
-                                                            sickLeave: <?= $leave_data['sickLeave']; ?>,
-                                                            personalLeave: <?= $leave_data['personalLeave']; ?>,
-                                                            vacationLeave: <?= $leave_data['vacationLeave']; ?>
+                                                            sickLeave: <?= $leave_data['ลาป่วย']; ?>,
+                                                            personalLeave: <?= $leave_data['ลากิจส่วนตัว']; ?>,
+                                                            vacationLeave: <?= $leave_data['ลาพักผ่อน']; ?>,
+                                                            ordinationLeave: <?= $leave_data['ลาบวช']; ?>,
+                                                            meditationLeave: <?= $leave_data['ลาไปถือศีล']; ?>,
+                                                            militaryLeave: <?= $leave_data['ลาเข้ารับการตรวจเลือก']; ?>
                                                         };
+
+                                                        for (const key in leaveData) {
+                                                            if (leaveData[key] === 0) {
+                                                                leaveData[key] = 0.1;
+                                                            }
+                                                        }
 
                                                         var ctx = document.getElementById('leaveChart<?= $user['UserID']; ?>').getContext('2d');
                                                         var chart = new Chart(ctx, {
                                                             type: 'pie',
                                                             data: {
-                                                                labels: ['ลาป่วย', 'ลากิจส่วนตัว', 'ลาพักผ่อน'],
+                                                                labels: ['ลาป่วย', 'ลากิจส่วนตัว', 'ลาพักผ่อน', 'ลาบวช', 'ลาไปถือศีล', 'ลาเข้ารับการตรวจเลือก'],
                                                                 datasets: [{
                                                                     label: 'ประเภทการลา',
-                                                                    data: [leaveData.sickLeave, leaveData.personalLeave, leaveData.vacationLeave],
-                                                                    backgroundColor: ['#FF5733', '#33FF57', '#3357FF'],
+                                                                    data: [
+                                                                        leaveData.sickLeave, leaveData.personalLeave, leaveData.vacationLeave, leaveData.ordinationLeave,
+                                                                        leaveData.meditationLeave, leaveData.militaryLeave
+                                                                    ],
+                                                                    backgroundColor: ['#FF5733', '#33FF57', '#3357FF', '#FF8C00', '#FFD700', '#8A2BE2'],
                                                                     hoverOffset: 4
                                                                 }]
                                                             },
                                                             options: {
                                                                 responsive: true,
                                                                 plugins: {
-                                                                    legend: {
-                                                                        position: 'top',
-                                                                    }
+                                                                    legend: { position: 'top' }
                                                                 }
                                                             }
                                                         });
                                                     </script>
+
                                                     <!-- Leave History -->
                                                     <h5>ประวัติการลา</h5>
                                                     <table class="table">
@@ -341,14 +490,7 @@ $conn->close();
                                                                     <td><?= htmlspecialchars($leave['StartDate']); ?></td>
                                                                     <td><?= htmlspecialchars($leave['EndDate']); ?></td>
                                                                     <td><?= htmlspecialchars($leave['ApprovalStatus']); ?></td>
-                                                                    <td>
-                                                                        <?php
-                                                                        $startDate = new DateTime($leave['StartDate']);
-                                                                        $endDate = new DateTime($leave['EndDate']);
-                                                                        $diff = $startDate->diff($endDate);
-                                                                        echo $diff->days . ' วัน';
-                                                                        ?>
-                                                                    </td>
+                                                                    <td><?= htmlspecialchars($leave['leave_days']); ?> วัน</td>
                                                                 </tr>
                                                             <?php endforeach; ?>
                                                         </tbody>

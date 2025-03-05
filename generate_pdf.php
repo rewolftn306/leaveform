@@ -358,6 +358,8 @@ switch ($leaveType) {
         break;
 }
 
+// ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
+unlink($tempImageFile);
 //Get the content of PDF in memory as binary data
 $pdfData = $pdf->Output('S');
 
