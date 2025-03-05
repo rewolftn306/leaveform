@@ -1,5 +1,4 @@
 <?php
-// approve_leave.php
 session_start();
 
 // ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
@@ -46,93 +45,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     // ตรวจสอบสถานะการอนุมัติแต่ละระดับ
-    if ($current_role === 'Leader' && $leader_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Approved' WHERE ApplicationID = ?";
-        $next_status = 'Leader2';
-    } elseif ($current_role === 'Leader2' && $leader2_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET Leader2ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
-        $next_status = 'Leader3';
-    } elseif ($current_role === 'Leader3' && $leader3_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET Leader3ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
-        $next_status = 'Director';
-    } elseif ($current_role === 'Director' && $director_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET DirectorApprovalStatus = 'Approved', ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
-        $next_status = 'Approved';
-    } else {
-        // หากไม่ตรงกับระดับการอนุมัติ
-        exit;
+    if (isset($_POST['approve_leave'])) {
+        if ($current_role === 'Leader' && $leader_status === 'Pending') {
+            $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        } elseif ($current_role === 'Leader2' && $leader2_status === 'Pending') {
+            $update_sql = "UPDATE leaveapplications SET Leader2ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        } elseif ($current_role === 'Leader3' && $leader3_status === 'Pending') {
+            $update_sql = "UPDATE leaveapplications SET Leader3ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        } elseif ($current_role === 'Director' && $director_status === 'Pending') {
+            $update_sql = "UPDATE leaveapplications SET DirectorApprovalStatus = 'Approved', ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        } else {
+            exit;
+        }
+    } elseif (isset($_POST['reject_leave'])) {
+        $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Rejected', Leader2ApprovalStatus = 'Rejected', Leader3ApprovalStatus = 'Rejected', DirectorApprovalStatus = 'Rejected', ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
     }
 
-    $update_stmt = $conn->prepare($update_sql);
-    $update_stmt->bind_param('i', $leave_id);
+    // หากมีการอัปเดตสถานะ
+    if (isset($update_sql)) {
+        $update_stmt = $conn->prepare($update_sql);
+        $update_stmt->bind_param('i', $leave_id);
 
-    if ($update_stmt->execute()) {
-        // ตรวจสอบว่าทุกขั้นตอนอนุมัติแล้วหรือไม่
-        if ($next_status === 'Approved') {
-            // อัปเดตสถานะทั้งหมดเป็น Approved หากทุกระดับอนุมัติแล้ว
-            $final_update_sql = "UPDATE leaveapplications SET ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
-            $final_update_stmt = $conn->prepare($final_update_sql);
-            $final_update_stmt->bind_param('i', $leave_id);
-            $final_update_stmt->execute();
-            $final_update_stmt->close();
+        if ($update_stmt->execute()) {
+            header("Location: approve_leave.php?success=1");
+            exit;
+        } else {
+            echo "การอัปเดตสถานะการลาไม่สำเร็จ: " . htmlspecialchars($update_stmt->error);
         }
 
-        header("Location: approve_leave.php?success=1");
-        exit;
-    } else {
-        echo "การอัปเดตสถานะการลาไม่สำเร็จ: " . htmlspecialchars($update_stmt->error);
+        $update_stmt->close();
     }
-
-    $update_stmt->close();
-}
-
-// ตรวจสอบการปฏิเสธคำขอ
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reject_leave'])) {
-    // ตรวจสอบ CSRF Token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die("Invalid CSRF token");
-    }
-
-    $leave_id = intval($_POST['leave_id']);
-    $current_role = $_SESSION['Role'];
-
-    // ตรวจสอบว่าคำขอนี้ยังคงอยู่ในสถานะ Pending
-    $stmt_check = $conn->prepare("SELECT ApprovalStatus, LeaderApprovalStatus, Leader2ApprovalStatus, Leader3ApprovalStatus, DirectorApprovalStatus FROM leaveapplications WHERE ApplicationID = ?");
-    $stmt_check->bind_param('i', $leave_id);
-    $stmt_check->execute();
-    $stmt_check->bind_result($current_status, $leader_status, $leader2_status, $leader3_status, $director_status);
-    $stmt_check->fetch();
-    $stmt_check->close();
-
-    if ($current_status !== 'Pending') {
-        header("Location: approve_leave.php?error=คำขอนี้ได้ถูกดำเนินการแล้ว");
-        exit;
-    }
-
-    // ตรวจสอบสถานะการปฏิเสธแต่ละระดับ
-    if ($current_role === 'Leader' && $leader_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
-    } elseif ($current_role === 'Leader2' && $leader2_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET Leader2ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
-    } elseif ($current_role === 'Leader3' && $leader3_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET Leader3ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
-    } elseif ($current_role === 'Director' && $director_status === 'Pending') {
-        $update_sql = "UPDATE leaveapplications SET DirectorApprovalStatus = 'Rejected', ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
-    } else {
-        exit;
-    }
-
-    $update_stmt = $conn->prepare($update_sql);
-    $update_stmt->bind_param('i', $leave_id);
-
-    if ($update_stmt->execute()) {
-        header("Location: approve_leave.php?success=1");
-        exit;
-    } else {
-        echo "การอัปเดตสถานะการลาไม่สำเร็จ: " . htmlspecialchars($update_stmt->error);
-    }
-
-    $update_stmt->close();
 }
 
 // ดึงคำขอลาการลาที่รอดำเนินการ
@@ -142,9 +84,9 @@ $params = [];
 $types = '';
 $where_clauses = [];
 
-// ใช้ GET สำหรับการค้นหาและกรอง
+$role = $_SESSION['Role'];  // กำหนดค่า role จาก session ของผู้ใช้
+
 if ($_SERVER['REQUEST_METHOD'] === 'GET') {
-    // การค้นหาด้วยคำค้นหาตามชื่อ
     if (isset($_GET['search_term']) && !empty(trim($_GET['search_term']))) {
         $search_term = '%' . trim($_GET['search_term']) . '%';
         $where_clauses[] = "u.FirstName LIKE ? OR u.LastName LIKE ?";
@@ -153,16 +95,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
         $types .= 'ss';
     }
 
-    // การกรองตามสถานะการอนุมัติ
     if (isset($_GET['approval_status']) && $_GET['approval_status'] !== '') {
         $status_filter = $_GET['approval_status'];
-        $where_clauses[] = "la.ApprovalStatus = ?";
+
+        if ($role === 'Leader') {
+            $where_clauses[] = "la.LeaderApprovalStatus = ?";
+        } elseif ($role === 'Leader2') {
+            $where_clauses[] = "la.Leader2ApprovalStatus = ?";
+        } elseif ($role === 'Leader3') {
+            $where_clauses[] = "la.Leader3ApprovalStatus = ?";
+        } elseif ($role === 'Director') {
+            $where_clauses[] = "la.DirectorApprovalStatus = ?";
+        }
+
         $params[] = $status_filter;
         $types .= 's';
     }
 }
 
-// สร้างคำสั่ง SQL พร้อมการค้นหาและกรอง
 $sql = "SELECT 
             la.ApplicationID, 
             la.UserID, 
@@ -186,7 +136,6 @@ if (!empty($where_clauses)) {
     $sql .= " WHERE " . implode(" AND ", $where_clauses);
 }
 
-// เพิ่มการเรียงลำดับให้สถานะ 'Pending' ขึ้นก่อน
 $sql .= " ORDER BY CASE WHEN la.ApprovalStatus = 'Pending' THEN 0 ELSE 1 END, la.ApplicationID DESC";
 
 $stmt = $conn->prepare($sql);
@@ -253,7 +202,7 @@ $conn->close();
                         <option value="">-- เลือกสถานะการอนุมัติ --</option>
                         <option value="Pending" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Pending') ? 'selected' : ''; ?>>รอดำเนินการ</option>
                         <option value="Approved" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Approved') ? 'selected' : ''; ?>>อนุมัติแล้ว</option>
-                        <option value="Rejected" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Rejected') ? 'selected' : ''; ?>>ถูกปฏิเสธ</option>
+                        <option value="Rejected" <?= (isset($_GET['approval_status']) && $_GET['approval_status'] === 'Rejected') ? 'selected' : ''; ?>>ถูกปฏิเสธแล้ว</option>
                     </select>
                 </div>
                 <div class="col-md-2">
@@ -309,16 +258,24 @@ $conn->close();
                                     <?php
                                     switch ($_SESSION['Role']) {
                                         case 'Leader':
-                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
+                                                 ($leave['LeaderApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
+                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Leader2':
-                                            echo $leave['Leader2ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                            echo $leave['Leader2ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
+                                                 ($leave['Leader2ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
+                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Leader3':
-                                            echo $leave['Leader3ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                            echo $leave['Leader3ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
+                                                 ($leave['Leader3ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
+                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Director':
-                                            echo $leave['DirectorApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">Director: รอดำเนินการ</span>';
+                                            echo $leave['DirectorApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
+                                                 ($leave['DirectorApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
+                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         default:
                                             echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
