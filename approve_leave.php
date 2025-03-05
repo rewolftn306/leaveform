@@ -9,7 +9,7 @@ if (!isset($_SESSION['Username'])) {
 }
 
 // ตรวจสอบบทบาทของผู้ใช้
-$allowed_roles = ['Director','Leader' ,'Leader2','Leader3', 'Admin' ];
+$allowed_roles = ['Director', 'Leader', 'Leader2', 'Leader3', 'Admin'];
 if (!in_array($_SESSION['Role'], $allowed_roles)) {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
 }
@@ -29,35 +29,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     $leave_id = intval($_POST['leave_id']);
+    $current_role = $_SESSION['Role'];
 
     // ตรวจสอบว่าคำขอนี้ยังคงอยู่ในสถานะ Pending
-    $stmt_check = $conn->prepare("SELECT ApprovalStatus FROM leaveapplications WHERE ApplicationID = ?");
+    $stmt_check = $conn->prepare("SELECT ApprovalStatus, LeaderApprovalStatus, Leader2ApprovalStatus, Leader3ApprovalStatus, DirectorApprovalStatus FROM leaveapplications WHERE ApplicationID = ?");
     $stmt_check->bind_param('i', $leave_id);
     $stmt_check->execute();
-    $stmt_check->bind_result($current_status);
+    $stmt_check->bind_result($current_status, $leader_status, $leader2_status, $leader3_status, $director_status);
     $stmt_check->fetch();
     $stmt_check->close();
 
+    // หากสถานะการลาไม่ใช่ Pending
     if ($current_status !== 'Pending') {
         header("Location: approve_leave.php?error=คำขอนี้ได้ถูกดำเนินการแล้ว");
         exit;
     }
 
-    if (isset($_POST['approve_leave'])) {
-        $status = 'Approved';
-    } elseif (isset($_POST['reject_leave'])) {
-        $status = 'Rejected';
+    // ตรวจสอบสถานะการอนุมัติแต่ละระดับ
+    if ($current_role === 'Leader' && $leader_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        $next_status = 'Leader2';
+    } elseif ($current_role === 'Leader2' && $leader2_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET Leader2ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        $next_status = 'Leader3';
+    } elseif ($current_role === 'Leader3' && $leader3_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET Leader3ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        $next_status = 'Director';
+    } elseif ($current_role === 'Director' && $director_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET DirectorApprovalStatus = 'Approved', ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+        $next_status = 'Approved';
     } else {
-        // ไม่ทำอะไรถ้าไม่ใช่การอนุมัติหรือปฏิเสธ
+        // หากไม่ตรงกับระดับการอนุมัติ
         exit;
     }
 
-    $update_sql = "UPDATE leaveapplications SET ApprovalStatus = ? WHERE ApplicationID = ?";
     $update_stmt = $conn->prepare($update_sql);
-    $update_stmt->bind_param('si', $status, $leave_id);
+    $update_stmt->bind_param('i', $leave_id);
 
     if ($update_stmt->execute()) {
-        // ส่งกลับไปที่หน้าหลักพร้อมข้อความสำเร็จ
+        // ตรวจสอบว่าทุกขั้นตอนอนุมัติแล้วหรือไม่
+        if ($next_status === 'Approved') {
+            // อัปเดตสถานะทั้งหมดเป็น Approved หากทุกระดับอนุมัติแล้ว
+            $final_update_sql = "UPDATE leaveapplications SET ApprovalStatus = 'Approved' WHERE ApplicationID = ?";
+            $final_update_stmt = $conn->prepare($final_update_sql);
+            $final_update_stmt->bind_param('i', $leave_id);
+            $final_update_stmt->execute();
+            $final_update_stmt->close();
+        }
+
         header("Location: approve_leave.php?success=1");
         exit;
     } else {
@@ -67,7 +86,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $update_stmt->close();
 }
 
-// ดึงคำขอลาการลาที่รอดำเนินการและตามการค้นหา
+// ตรวจสอบการปฏิเสธคำขอ
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reject_leave'])) {
+    // ตรวจสอบ CSRF Token
+    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
+        die("Invalid CSRF token");
+    }
+
+    $leave_id = intval($_POST['leave_id']);
+    $current_role = $_SESSION['Role'];
+
+    // ตรวจสอบว่าคำขอนี้ยังคงอยู่ในสถานะ Pending
+    $stmt_check = $conn->prepare("SELECT ApprovalStatus, LeaderApprovalStatus, Leader2ApprovalStatus, Leader3ApprovalStatus, DirectorApprovalStatus FROM leaveapplications WHERE ApplicationID = ?");
+    $stmt_check->bind_param('i', $leave_id);
+    $stmt_check->execute();
+    $stmt_check->bind_result($current_status, $leader_status, $leader2_status, $leader3_status, $director_status);
+    $stmt_check->fetch();
+    $stmt_check->close();
+
+    if ($current_status !== 'Pending') {
+        header("Location: approve_leave.php?error=คำขอนี้ได้ถูกดำเนินการแล้ว");
+        exit;
+    }
+
+    // ตรวจสอบสถานะการปฏิเสธแต่ละระดับ
+    if ($current_role === 'Leader' && $leader_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET LeaderApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
+    } elseif ($current_role === 'Leader2' && $leader2_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET Leader2ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
+    } elseif ($current_role === 'Leader3' && $leader3_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET Leader3ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
+    } elseif ($current_role === 'Director' && $director_status === 'Pending') {
+        $update_sql = "UPDATE leaveapplications SET DirectorApprovalStatus = 'Rejected', ApprovalStatus = 'Rejected' WHERE ApplicationID = ?";
+    } else {
+        exit;
+    }
+
+    $update_stmt = $conn->prepare($update_sql);
+    $update_stmt->bind_param('i', $leave_id);
+
+    if ($update_stmt->execute()) {
+        header("Location: approve_leave.php?success=1");
+        exit;
+    } else {
+        echo "การอัปเดตสถานะการลาไม่สำเร็จ: " . htmlspecialchars($update_stmt->error);
+    }
+
+    $update_stmt->close();
+}
+
+// ดึงคำขอลาการลาที่รอดำเนินการ
 $search_term = '';
 $status_filter = '';
 $params = [];
@@ -105,7 +173,11 @@ $sql = "SELECT
             la.Remarks, 
             u.FirstName, 
             u.LastName, 
-            lt.LeaveName
+            lt.LeaveName,
+            la.LeaderApprovalStatus, 
+            la.Leader2ApprovalStatus, 
+            la.Leader3ApprovalStatus, 
+            la.DirectorApprovalStatus
         FROM leaveapplications la
         JOIN users u ON la.UserID = u.UserID
         JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID";
@@ -117,7 +189,6 @@ if (!empty($where_clauses)) {
 // เพิ่มการเรียงลำดับให้สถานะ 'Pending' ขึ้นก่อน
 $sql .= " ORDER BY CASE WHEN la.ApprovalStatus = 'Pending' THEN 0 ELSE 1 END, la.ApplicationID DESC";
 
-// เตรียมคำสั่ง SQL
 $stmt = $conn->prepare($sql);
 if ($stmt) {
     if (!empty($params)) {
@@ -138,8 +209,8 @@ if ($stmt) {
 }
 
 $conn->close();
-
 ?>
+
 <!DOCTYPE html>
 <html lang="th">
 
@@ -236,18 +307,21 @@ $conn->close();
                                 <td><?= htmlspecialchars($leave['EndDate']); ?></td>
                                 <td>
                                     <?php
-                                    switch ($leave['ApprovalStatus']) {
-                                        case 'Approved':
-                                            echo '<span class="badge bg-success">อนุมัติแล้ว</span>';
+                                    switch ($_SESSION['Role']) {
+                                        case 'Leader':
+                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
                                             break;
-                                        case 'Pending':
-                                            echo '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                        case 'Leader2':
+                                            echo $leave['Leader2ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
                                             break;
-                                        case 'Rejected':
-                                            echo '<span class="badge bg-danger">ถูกปฏิเสธ</span>';
+                                        case 'Leader3':
+                                            echo $leave['Leader3ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">รอดำเนินการ</span>';
+                                            break;
+                                        case 'Director':
+                                            echo $leave['DirectorApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : '<span class="badge bg-warning text-dark">Director: รอดำเนินการ</span>';
                                             break;
                                         default:
-                                            echo '<span class="badge bg-secondary">ยกเลิก</span>';
+                                            echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
                                     }
                                     ?>
                                 </td>
@@ -282,31 +356,66 @@ $conn->close();
                                     </div>
                                 </td>
                                 <td>
-                                    <?php switch ($leave['ApprovalStatus']) {
-                                        case 'Approved':
-                                            echo '<span class="badge bg-success">ดำเนินการแล้ว</span>';
-                                            break;
-                                        case 'Pending':
-                                            echo '<form method="POST" class="d-inline">
+                                    <?php
+                                    switch ($_SESSION['Role']) {
+                                        case 'Leader':
+                                            if ($leave['LeaderApprovalStatus'] === 'Pending') {
+                                                echo '<form method="POST" class="d-inline">
                                                         <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
                                                         <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
                                                         <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
-                                                    </form>
-                                                    <form method="POST" class="d-inline">
+                                                      </form>
+                                                      <form method="POST" class="d-inline">
                                                         <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
                                                         <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
                                                         <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
-                                                    </form>';
+                                                      </form>';
+                                            }
                                             break;
-                                        case 'Rejected':
-                                            echo '<span class="badge bg-danger">ดำเนินการแล้ว</span>';
+                                        case 'Leader2':
+                                            if ($leave['Leader2ApprovalStatus'] === 'Pending') {
+                                                echo '<form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                      </form>
+                                                      <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                      </form>';
+                                            }
                                             break;
-                                        case 'Cancelled':
-                                            echo '<span class="badge bg-secondary">ยกเลิกการดำเนินการ</span>';
+                                        case 'Leader3':
+                                            if ($leave['Leader3ApprovalStatus'] === 'Pending') {
+                                                echo '<form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                      </form>
+                                                      <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                      </form>';
+                                            }
                                             break;
-                                        default:
-                                            echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
-                                    } ?>
+                                        case 'Director':
+                                            if ($leave['DirectorApprovalStatus'] === 'Pending') {
+                                                echo '<form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                      </form>
+                                                      <form method="POST" class="d-inline">
+                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                      </form>';
+                                            }
+                                            break;
+                                    }
+                                    ?>
                                 </td>
                             </tr>
                         <?php endforeach; ?>

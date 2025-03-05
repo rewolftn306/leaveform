@@ -1,12 +1,6 @@
 <?php
 session_start();
 
-// ตรวจสอบว่าผู้ใช้เข้าสู่ระบบหรือไม่
-if (!isset($_SESSION['Username'])) {
-    header("Location: login.php");
-    exit;
-}
-
 // ตรวจสอบบทบาทของผู้ใช้ (Admin เท่านั้นที่สามารถเข้าถึงได้)
 if ($_SESSION['Role'] !== 'Admin') {
     die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");

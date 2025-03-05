@@ -153,7 +153,7 @@ try {
 
     // หลังจากการลงทะเบียนสำเร็จ
 // เช็คบทบาทของผู้ใช้ที่ลงทะเบียน
-    if ($role === 'Admin') {
+    if ($_SESSION['Role'] === 'Admin') {
         // หากผู้ใช้เป็น Admin, ให้ไปที่หน้า edit_user.php
         header("Location: manage_users.php?success=ลงทะเบียนสำเร็จ!");
         exit();
