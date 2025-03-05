@@ -52,8 +52,8 @@ $sql = "SELECT
             u.LastName, 
             u.Position
         FROM users u
-        LEFT JOIN leaveapplications la ON u.UserID = la.UserID
-        WHERE 1";
+        LEFT JOIN leaveapplications la ON u.UserID = la.UserID";
+
 
 if (!empty($where_clauses)) {
     $sql .= " AND " . implode(" AND ", $where_clauses);
@@ -119,23 +119,20 @@ while ($row = $conditions_result->fetch_assoc()) {
 
 // คำนวณสถานะการได้รับค่าจ้าง
 function calculateStatus($leave_type, $days, $leave_conditions) {
-    $status = 'ไม่ได้รับค่าจ้าง'; // Default status
-
-    // ตรวจสอบว่า leave_conditions[$leave_type] มีข้อมูลหรือไม่
-    if (isset($leave_conditions[$leave_type]) && is_array($leave_conditions[$leave_type])) {
+    $status = 'ไม่ได้รับค่าจ้าง';
+    if (isset($leave_conditions[$leave_type])) {
         foreach ($leave_conditions[$leave_type] as $condition) {
-            if (strpos($condition['ConditionDescription'], 'ได้รับค่าจ้าง') !== false) {
-                // ตรวจสอบเงื่อนไขสำหรับการได้รับค่าจ้าง
-                if ($days <= 60) {
+            // ตรวจสอบว่ามีคีย์ 'MaxPaidDays' อยู่จริง
+            if (isset($condition['MaxPaidDays']) && strpos($condition['ConditionDescription'], 'ได้รับค่าจ้าง') !== false) {
+                if ($days <= (int)$condition['MaxPaidDays']) {
                     $status = 'ได้รับค่าจ้าง';
-                } else {
-                    $status = 'ไม่ได้รับค่าจ้าง';
                 }
             }
         }
     }
     return $status;
 }
+
 
 
 // Move the database connection close here, after all queries have been executed.
@@ -267,9 +264,6 @@ $conn->close();
                                         $status = calculateStatus($leave_type_id, $days, $leave_conditions);
                                     }
                                     ?>
-                                    <span><?= "ลาป่วย: " . $leave_data['sickLeave'] . " วัน"; ?></span><br>
-                                    <span><?= "ลากิจส่วนตัว: " . $leave_data['personalLeave'] . " วัน"; ?></span><br>
-                                    <span><?= "ลาพักผ่อน: " . $leave_data['vacationLeave'] . " วัน"; ?></span><br>
                                     <span>สถานะการได้รับค่าจ้าง: <?= $status; ?></span>
                                 </td>
                                 <td>
@@ -373,7 +367,39 @@ $conn->close();
     </div>
 
     <!-- Bootstrap JS -->
+     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener("DOMContentLoaded", function () {
+            document.querySelectorAll("[data-bs-toggle='modal']").forEach(button => {
+                button.addEventListener("click", function () {
+                    let userID = this.getAttribute("data-userid");
+                    fetch(`get_leave_data.php?userid=${userID}`)
+                        .then(response => response.json())
+                        .then(data => {
+                            let leaveChartID = `leaveChart${userID}`;
+                            let leaveRecordsID = `leaveRecords${userID}`;
+                            
+                            let ctx = document.getElementById(leaveChartID).getContext("2d");
+
+                            new Chart(ctx, {
+                                type: "pie",
+                                data: {
+                                    labels: ["ลาป่วย", "ลากิจส่วนตัว", "ลาพักผ่อน"],
+                                    datasets: [{
+                                        data: [data.sickLeave, data.personalLeave, data.vacationLeave],
+                                        backgroundColor: ["#ff6384", "#36a2eb", "#ffcd56"]
+                                    }]
+                                }
+                            });
+
+                            document.getElementById(leaveRecordsID).innerHTML = data.historyTable;
+                        })
+                        .catch(error => console.error("Error:", error));
+                });
+            });
+        });
+    </script>
 </body>
 
 </html>
