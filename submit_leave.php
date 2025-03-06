@@ -13,36 +13,12 @@ if ($_SESSION['Role'] !== 'Employee') {
 }
 
 include('connect.php');
+include('notification.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
 function sanitize_input($data)
 {
     return htmlspecialchars(stripslashes(trim($data)));
-}
-
-// ฟังก์ชันสำหรับส่งข้อความไปยัง Google Chat ผ่าน Webhook
-function sendGoogleChatNotification($message) {
-    $webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAaBCuirU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=B4GrHde2cf_gpcXXLc6mS6FmNuvvsxdTIJYXnj4btEY';  // ใส่ URL Webhook ที่ได้จาก Google Chat
-
-    $data = [
-        'text' => $message
-    ];
-
-    $options = [
-        'http' => [
-            'header'  => "Content-type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => json_encode($data)
-        ]
-    ];
-
-    $context  = stream_context_create($options);
-    $result = file_get_contents($webhookUrl, false, $context);
-
-    if ($result === FALSE) {
-        // Handle error
-        error_log('Error sending Google Chat notification');
-    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {

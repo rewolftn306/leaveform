@@ -14,6 +14,7 @@ if (!in_array($_SESSION['Role'], $allowed_roles)) {
 }
 
 include('connect.php');
+include('notification.php');
 
 // สร้าง CSRF Token หากยังไม่มี
 if (empty($_SESSION['csrf_token'])) {
@@ -22,10 +23,20 @@ if (empty($_SESSION['csrf_token'])) {
 
 // ตรวจสอบการอนุมัติหรือปฏิเสธคำขอ
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    // ตรวจสอบ CSRF Token
-    if (!isset($_POST['csrf_token']) || $_POST['csrf_token'] !== $_SESSION['csrf_token']) {
-        die("Invalid CSRF token");
+    // รับข้อมูลจากฟอร์ม
+    $leave_id = intval($_POST['leave_id']);
+    $current_role = $_SESSION['Role']; // บทบาทของผู้ใช้งานจาก session
+
+    // สมมติว่าเราจะส่งข้อความหาผู้ใช้งานในระดับถัดไป
+    if (isset($_POST['approve_leave'])) {
+        // เรียกใช้ไฟล์ที่อัปเดต PDF ด้วยลายเซ็น
+        $leave_id = intval($_POST['leave_id']);
+        include('process_leave_approval.php'); // ไฟล์นี้จะทำการอัปเดต PDF และเพิ่มลายเซ็น
+        
+        $message = "คำขอลานี้ได้รับการอนุมัติจาก " . $current_role . " แล้ว กรุณากดอนุมัติหรือปฏิเสธคำขอของคุณ";
+        sendGoogleChatNotification($message, $current_role);  // ส่งข้อความตามบทบาทที่เลือก
     }
+
 
     $leave_id = intval($_POST['leave_id']);
     $current_role = $_SESSION['Role'];
@@ -106,6 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'GET') {
             $where_clauses[] = "la.Leader3ApprovalStatus = ?";
         } elseif ($role === 'Director') {
             $where_clauses[] = "la.DirectorApprovalStatus = ?";
+        } elseif ($role === 'Admin') {
+            $where_clauses[] = "la.ApprovalStatus = ?";
         }
 
         $params[] = $status_filter;
@@ -258,24 +271,29 @@ $conn->close();
                                     <?php
                                     switch ($_SESSION['Role']) {
                                         case 'Leader':
-                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
-                                                 ($leave['LeaderApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
-                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
+                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' :
+                                                ($leave['LeaderApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' :
+                                                    '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Leader2':
-                                            echo $leave['Leader2ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
-                                                 ($leave['Leader2ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
-                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
+                                            echo $leave['Leader2ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' :
+                                                ($leave['Leader2ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' :
+                                                    '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Leader3':
-                                            echo $leave['Leader3ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
-                                                 ($leave['Leader3ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
-                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
+                                            echo $leave['Leader3ApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' :
+                                                ($leave['Leader3ApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' :
+                                                    '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         case 'Director':
-                                            echo $leave['DirectorApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' : 
-                                                 ($leave['DirectorApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' : 
-                                                 '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
+                                            echo $leave['DirectorApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' :
+                                                ($leave['DirectorApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' :
+                                                    '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
+                                            break;
+                                        case 'Admin':
+                                            echo $leave['LeaderApprovalStatus'] === 'Approved' ? '<span class="badge bg-success">อนุมัติแล้ว</span>' :
+                                                ($leave['LeaderApprovalStatus'] === 'Rejected' ? '<span class="badge bg-danger">ถูกปฏิเสธแล้ว</span>' :
+                                                    '<span class="badge bg-warning text-dark">รอดำเนินการ</span>');
                                             break;
                                         default:
                                             echo '<span class="badge bg-secondary">สถานะไม่รู้จัก</span>';
@@ -372,6 +390,7 @@ $conn->close();
                                             }
                                             break;
                                     }
+
                                     ?>
                                 </td>
                             </tr>
