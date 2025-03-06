@@ -142,27 +142,23 @@ while ($row = $conditions_result->fetch_assoc()) {
 }
 
 // ฟังก์ชันคำนวณสถานะการได้รับค่าจ้าง
-function calculateStatus($leave_type, $days, $notRecovered)
+function calculateStatus($leave_type, $days)
 {
-    $status = 'ไม่ได้รับค่าจ้าง'; // ค่าเริ่มต้น
+    $status = 'ได้รับค่าจ้าง'; // ค่าเริ่มต้น
 
     // Logic for each leave type
     switch ($leave_type) {
         case 'ลาป่วย':  // Sick Leave
-            $yearLimit = 1;
-            $leaveLimit = 60;
+            $leaveLimit = 120;  // ขีดจำกัดวันลา
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
-            } elseif ($notRecovered && $days <= $leaveLimit + 60) {
-                $status = 'ได้รับค่าจ้าง';
-            } elseif ($days > 120) {
+            } elseif ($days > 120) {  // ถ้าจำนวนวันเกิน 120 วัน
                 $status = 'ไม่ได้รับค่าจ้าง';
             }
             break;
 
         case 'ลากิจส่วนตัว':  // Personal Leave
-            $yearLimit = 1;
-            $leaveLimit = 30;
+            $leaveLimit = 45;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -171,8 +167,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาพักผ่อน':  // Vacation Leave
-            $yearLimit = 1;
-            $leaveLimit = 15;
+            $leaveLimit = 30;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -181,8 +176,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาบวช':  // Ordination Leave
-            $yearLimit = 1;
-            $leaveLimit = 90;
+            $leaveLimit = 120;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -191,8 +185,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาไปถือศีลและปฏิบัติธรรม':  // Meditation Leave
-            $yearLimit = 1;
-            $leaveLimit = 60;
+            $leaveLimit = 90;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -201,8 +194,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':  // Military Leave
-            $yearLimit = 1;
-            $leaveLimit = 30;
+            $leaveLimit = 60;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -211,8 +203,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาดูแลบิดาหรือมารดา':  // Parent Care Leave
-            $yearLimit = 1;
-            $leaveLimit = 30;
+            $leaveLimit = 5;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -221,7 +212,6 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'การลาคลอดบุตร':  // Childbirth Leave
-            $yearLimit = 1;
             $leaveLimit = 90;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
@@ -231,18 +221,16 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'การลากิจเพื่อเลี้ยงดูบุตร':  // Childcare Leave
-            $yearLimit = 1;
-            $leaveLimit = 90;
+            $leaveLimit = 150;
             if ($days <= $leaveLimit) {
-                $status = 'ได้รับค่าจ้าง';
+                $status = 'ไม่ได้รับค่าจ้าง';
             } else {
                 $status = 'ไม่ได้รับค่าจ้าง';
             }
             break;
 
         case 'ลาสมรส':  // Marriage Leave
-            $yearLimit = 1;
-            $leaveLimit = 7;
+            $leaveLimit = 10;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
             } else {
@@ -251,7 +239,6 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาพักผ่อนไปต่างประเทศ':  // Foreign Vacation Leave
-            $yearLimit = 1;
             $leaveLimit = 30;
             if ($days <= $leaveLimit) {
                 $status = 'ได้รับค่าจ้าง';
@@ -261,22 +248,22 @@ function calculateStatus($leave_type, $days, $notRecovered)
             break;
 
         case 'ลาติดตามคู่สมรส':  // Spouse Follow Leave
-            $yearLimit = 1;
-            $leaveLimit = 30;
+            $leaveLimit = 1440;
             if ($days <= $leaveLimit) {
-                $status = 'ได้รับค่าจ้าง';
+                $status = 'ไม่ได้รับค่าจ้าง';
             } else {
                 $status = 'ไม่ได้รับค่าจ้าง';
             }
             break;
 
         default:
-            $status = 'ไม่ได้รับค่าจ้าง';  // Default case if leave type is not recognized
+            $status = 'ได้รับค่าจ้าง';  // Default case if leave type is not recognized
             break;
     }
 
     return $status;
 }
+
 
 ?>
 
@@ -396,11 +383,16 @@ function calculateStatus($leave_type, $days, $notRecovered)
                                         }
                                     }
 
-                                    // คำนวณสถานะการได้รับค่าจ้าง
-                                    $status = 'ไม่ได้รับค่าจ้าง';  // Default status
                                     foreach ($leave_data as $leave_type => $days) {
-                                        $status = calculateStatus($leave_type, $days, true);  // สมมติว่าผู้ใช้งานยังไม่หายป่วย
+                                        // คำนวณสถานะการได้รับค่าจ้าง
+                                        $status = calculateStatus($leave_type, $days);
+
+                                        // ตรวจสอบสถานะหลังจากคำนวณ
+                                        if ($status == 'ไม่ได้รับค่าจ้าง') {
+                                            break;  // หยุดการคำนวณหากพบว่าไม่เกินขีดจำกัดแล้ว
+                                        }
                                     }
+
                                     ?>
                                     <span><?= "ลาป่วย: " . $leave_data['ลาป่วย'] . " วัน"; ?></span><br>
                                     <span><?= "ลากิจส่วนตัว: " . $leave_data['ลากิจส่วนตัว'] . " วัน"; ?></span><br>
@@ -409,9 +401,11 @@ function calculateStatus($leave_type, $days, $notRecovered)
                                 </td>
                                 <td>
                                     <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal"
-                                        data-bs-target="#remarkModal<?= $user['UserID']; ?>" data-userid="<?= $user['UserID']; ?>">
+                                        data-bs-target="#remarkModal<?= $user['UserID']; ?>"
+                                        data-userid="<?= $user['UserID']; ?>">
                                         ดูรายละเอียด
                                     </button>
+
                                     <!-- Modal for User Profile and Leave Details -->
                                     <div class="modal fade" id="remarkModal<?= $user['UserID']; ?>" tabindex="-1"
                                         aria-labelledby="remarkModalLabel<?= $user['UserID']; ?>" aria-hidden="true">
@@ -428,6 +422,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
                                                         <?= htmlspecialchars($user['FirstName'] . ' ' . $user['LastName']); ?>
                                                     </h6>
                                                     <p>ตำแหน่ง: <?= htmlspecialchars($user['Position']); ?></p>
+
                                                     <!-- Leave Type Pie Chart -->
                                                     <canvas id="leaveChart<?= $user['UserID']; ?>" width="200"
                                                         height="200"></canvas>
@@ -441,12 +436,7 @@ function calculateStatus($leave_type, $days, $notRecovered)
                                                             militaryLeave: <?= $leave_data['ลาเข้ารับการตรวจเลือก']; ?>
                                                         };
 
-                                                        for (const key in leaveData) {
-                                                            if (leaveData[key] === 0) {
-                                                                leaveData[key] = 0.1;
-                                                            }
-                                                        }
-
+                                                        // ฟังก์ชั่นสำหรับการแสดงกราฟ
                                                         var ctx = document.getElementById('leaveChart<?= $user['UserID']; ?>').getContext('2d');
                                                         var chart = new Chart(ctx, {
                                                             type: 'pie',
