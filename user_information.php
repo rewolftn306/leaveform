@@ -14,7 +14,6 @@ $result = $conn->query($sql);
 
 <!DOCTYPE html>
 <html lang="th">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -27,19 +26,16 @@ $result = $conn->query($sql);
             margin: 20px;
             padding: 20px;
         }
-
         .navbar {
             background: #007BFF;
             padding: 10px;
             text-align: left;
         }
-
         .navbar a {
             color: white;
             text-decoration: none;
             font-size: 18px;
         }
-
         .profile-modal {
             display: none;
             position: fixed;
@@ -54,7 +50,6 @@ $result = $conn->query($sql);
             max-height: 80vh;
             overflow-y: auto;
         }
-
         .close-btn {
             position: absolute;
             top: 10px;
@@ -66,32 +61,26 @@ $result = $conn->query($sql);
             cursor: pointer;
             border-radius: 5px;
         }
-
         table {
             width: 100%;
             border-collapse: collapse;
             background: white;
         }
-
-        th,
-        td {
+        th, td {
             padding: 10px;
             text-align: left;
             border-bottom: 1px solid #ddd;
         }
-
         th {
             background-color: #007BFF;
             color: white;
         }
-
         tr:hover {
             background-color: #f1f1f1;
             cursor: pointer;
         }
     </style>
 </head>
-
 <body>
     <div class="navbar">
         <a href="index.php">← กลับหน้าหลัก</a>
@@ -107,21 +96,20 @@ $result = $conn->query($sql);
             <th>อีเมล</th>
         </tr>
         <?php while ($user = $result->fetch_assoc()) { ?>
-            <tr onclick="showProfile(<?php echo htmlspecialchars(json_encode($user)); ?>)">
-                <td><?php echo htmlspecialchars($user['FirstName']); ?></td>
-                <td><?php echo htmlspecialchars($user['LastName']); ?></td>
-                <td><?php echo htmlspecialchars($user['Position']); ?></td>
-                <td><?php echo htmlspecialchars($user['Department']); ?></td>
-                <td><?php echo htmlspecialchars($user['Tel']); ?></td>
-                <td><?php echo htmlspecialchars($user['Email']); ?></td>
-            </tr>
+        <tr onclick="showProfile(<?php echo htmlspecialchars(json_encode($user)); ?>)">
+            <td><?php echo htmlspecialchars($user['FirstName']); ?></td>
+            <td><?php echo htmlspecialchars($user['LastName']); ?></td>
+            <td><?php echo htmlspecialchars($user['Position']); ?></td>
+            <td><?php echo htmlspecialchars($user['Department']); ?></td>
+            <td><?php echo htmlspecialchars($user['Tel']); ?></td>
+            <td><?php echo htmlspecialchars($user['Email']); ?></td>
+        </tr>
         <?php } ?>
     </table>
-
+    
     <div class="profile-modal" id="profileModal">
         <button class="close-btn" onclick="closeProfile()">×</button>
-        <img id="profileImage" src="" alt="Profile Picture"
-            style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: auto;">
+        <img id="profileImage" src="" alt="Profile Picture" style="width: 100px; height: 100px; border-radius: 50%; display: block; margin: auto;">
         <h3 id="profileName"></h3>
         <p id="profilePosition"></p>
         <p id="profileDepartment"></p>
@@ -135,7 +123,7 @@ $result = $conn->query($sql);
             </tr>
         </table>
     </div>
-
+    
     <script>
         function showProfile(user) {
             document.getElementById("profileImage").src = user.profile_picture ? user.profile_picture : "default-profile.png";
@@ -151,7 +139,7 @@ $result = $conn->query($sql);
         }
 
         function fetchLeaveData(userId) {
-            fetch(fetch_leave.php ? UserID = ${ userId })
+            fetch(`fetch_leave.php?UserID=${userId}`)
                 .then(response => response.json())
                 .then(data => {
                     let table = document.getElementById("leaveTable");
@@ -178,5 +166,4 @@ $result = $conn->query($sql);
         }
     </script>
 </body>
-
 </html>
