@@ -147,12 +147,18 @@ if (isset($_GET['success'])) {
                     <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา"
                         maxlength="45" required></textarea>
                 </div>
+                <div class="mb-3">
+                    <label for="contact_info" class="form-label">ระหว่างลาติดต่อข้าพเจ้าได้ที่:</label>
+                    <input type="text" id="contact_info" name="contact_info" class="form-control"
+                        placeholder="กรอกข้อมูลการติดต่อ" maxlength="100">
+                </div>
+
 
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                 <button type="submit" class="btn btn-primary w-100">บันทึก</button>
-                
+
             </form>
             <a href="index.php" class="btn btn-danger mt-3 w-100">ย้อนกลับ</a>
         </div>

@@ -13,36 +13,12 @@ if ($_SESSION['Role'] !== 'Employee') {
 }
 
 include('connect.php');
+include('notification.php');
 
 // ฟังก์ชั่นสำหรับการกรองข้อมูล
 function sanitize_input($data)
 {
     return htmlspecialchars(stripslashes(trim($data)));
-}
-
-// ฟังก์ชันสำหรับส่งข้อความไปยัง Google Chat ผ่าน Webhook
-function sendGoogleChatNotification($message) {
-    $webhookUrl = 'https://chat.googleapis.com/v1/spaces/AAAAaBCuirU/messages?key=AIzaSyDdI0hCZtE6vySjMm-WEfRq3CPzqKqqsHI&token=B4GrHde2cf_gpcXXLc6mS6FmNuvvsxdTIJYXnj4btEY';  // ใส่ URL Webhook ที่ได้จาก Google Chat
-
-    $data = [
-        'text' => $message
-    ];
-
-    $options = [
-        'http' => [
-            'header'  => "Content-type: application/json\r\n",
-            'method'  => 'POST',
-            'content' => json_encode($data)
-        ]
-    ];
-
-    $context  = stream_context_create($options);
-    $result = file_get_contents($webhookUrl, false, $context);
-
-    if ($result === FALSE) {
-        // Handle error
-        error_log('Error sending Google Chat notification');
-    }
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -57,6 +33,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $endDate = $_POST['end_date'];
     $remarks = sanitize_input($_POST['remarks']);
     $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;  // ตัวเลือกการแนบไฟล์หรือขอจัดส่ง
+    $contactInfo = isset($_POST['contact_info']) ? sanitize_input($_POST['contact_info']) : '';
+
 
     // รับ UserID จาก Session
     $userID = intval($_SESSION['UserID']);
@@ -135,18 +113,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // สร้างข้อความสำหรับการแจ้งเตือน
         $message = "มีการขอลาใหม่จากผู้ใช้งาน: \n" .
-                   "ชื่อ: " . htmlspecialchars($_SESSION['FirstName'] . ' ' . $_SESSION['LastName']) . "\n" .
-                   "ประเภทการลา: " . htmlspecialchars($leaveTypeName) . "\n" .
-                   "วันที่เริ่มลา: " . htmlspecialchars($startDate) . "\n" .
-                   "วันที่สิ้นสุดการลา: " . htmlspecialchars($endDate) . "\n" .
-                   "เหตุผลการลา: " . htmlspecialchars($remarks) . "\n" .
-                   "สถานะการอนุมัติ: รอการอนุมัติ";
+            "ชื่อ: " . htmlspecialchars($_SESSION['FirstName'] . ' ' . $_SESSION['LastName']) . "\n" .
+            "ประเภทการลา: " . htmlspecialchars($leaveTypeName) . "\n" .
+            "วันที่เริ่มลา: " . htmlspecialchars($startDate) . "\n" .
+            "วันที่สิ้นสุดการลา: " . htmlspecialchars($endDate) . "\n" .
+            "เหตุผลการลา: " . htmlspecialchars($remarks) . "\n" .
+            "สถานะการอนุมัติ: รอการอนุมัติ";
 
         // ส่งข้อความไปยัง Google Chat
         sendGoogleChatNotification($message);
 
-        // เปลี่ยนเส้นทางไปยังหน้า generate_pdf.php
-        header("Location: generate_pdf.php?id=" . $application_id);
+        // เปลี่ยนเส้นทางไปยังหน้า generate_pdf.php พร้อมกับ application_id และ contact_info
+        header("Location: generate_pdf.php?id=" . $application_id . "&contact_info=" . urlencode($contactInfo));
         exit();
     } else {
         error_log("Execute failed: " . $stmt->error);

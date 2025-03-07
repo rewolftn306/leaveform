@@ -114,6 +114,8 @@ if ($result) {
 
 $conn->close();
 
+$_SESSION['tableData'] = $tableData;
+
 // แปลงข้อมูลกราฟให้เป็น JSON
 $chartLabels = json_encode(array_map(function ($leave) {
     return $leave;

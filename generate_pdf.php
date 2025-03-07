@@ -121,7 +121,7 @@ function convertToThaiDate($date, $isCreateDate = false)
 
     // หากเป็น CreateDate ให้เว้นวรรคเพียง 1 ช่อง
     if ($isCreateDate) {
-        return $day . '            ' . $thaiMonths[$month] . '            ' . $year;
+        return $day . '             ' . $thaiMonths[$month] . '               ' . $year;
     } else {
         // สำหรับ StartDate และ EndDate ให้เว้นวรรค 2 ช่อง
         return $day . '  ' . $thaiMonths[$month] . '  ' . $year;
@@ -182,6 +182,9 @@ file_put_contents($tempImageFile, $signatureImageData);
 $signatureWidth = 30;  // ความกว้าง
 $signatureHeight = 10; // ความสูง
 
+// รับตัวแปรจาก URL
+$contactInfo = isset($_GET['contact_info']) ? $_GET['contact_info'] : '';
+
 // Insert data based on the template
 switch ($leaveType) {
     case 'ลาป่วย':
@@ -211,6 +214,8 @@ switch ($leaveType) {
         $pdf->SetXY(175, 88.5);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
         $pdf->Write(0, convertThai($leaveDays . ' '));
         $pdf->Image($tempImageFile, 135, 123, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(28, 108);
+        $pdf->Write(0, convertThai(' ' . $contactInfo));
 
         switch ($leaveType) {
             case 'ลาป่วย':
@@ -272,11 +277,16 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai('' . $formattedStartDate));
         $pdf->SetXY(38, 128);
         $pdf->Write(0, convertThai('' . $formattedEndDate));
+        $pdf->SetXY(117, 156.5);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->Image($tempImageFile, 119, 142, $signatureWidth, $signatureHeight);
         break;
 
     case 'ลาพักผ่อน':
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
+        $formattedStartDate = convertToThaiDate($leaveData['StartDate']);
+        $formattedEndDate = convertToThaiDate($leaveData['EndDate']);
         $pdf->SetXY(129, 35);
         $pdf->Write(0, convertThai('' . $formattedDate));
         $pdf->SetXY(130, 62.5);
@@ -286,11 +296,14 @@ switch ($leaveType) {
         $pdf->SetXY(56, 62.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->SetXY(66, 82);
-        $pdf->Write(0, convertThai($leaveData['StartDate']));
+        $pdf->Write(0, convertThai('' . $formattedStartDate));
         $pdf->SetXY(118, 82);
-        $pdf->Write(0, convertThai($leaveData['EndDate']));
+        $pdf->Write(0, convertThai('' . $formattedEndDate));
         $pdf->SetXY(148, 94);
         $pdf->Write(0, convertThai('' . $leaveData['Tel']));
+        $pdf->SetXY(101, 123.5);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->Image($tempImageFile, 110, 109, $signatureWidth, $signatureHeight);
         break;
 
     case 'ขอยกเลิกวันลา':
@@ -328,6 +341,9 @@ switch ($leaveType) {
         $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
         $pdf->SetXY(175, 86);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
         $pdf->Write(0, convertThai($leaveDays . ' '));
+        $pdf->SetXY(140, 134);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->Image($tempImageFile, 145, 119.5, $signatureWidth, $signatureHeight);
         break;
 
     case 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร':
@@ -355,9 +371,14 @@ switch ($leaveType) {
         $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
         $pdf->SetXY(40, 92);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
         $pdf->Write(0, convertThai($leaveDays . ' '));
+        $pdf->SetXY(114, 154.5);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->Image($tempImageFile, 119, 139.5, $signatureWidth, $signatureHeight);
         break;
 }
 
+// ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
+unlink($tempImageFile);
 //Get the content of PDF in memory as binary data
 $pdfData = $pdf->Output('S');
 
