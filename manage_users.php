@@ -183,13 +183,14 @@ $conn->close();
                     </div>
                     <div class="modal-footer">
                         <a href="edit_user.php?userid=" id="editUserBtn" class="btn btn-warning">แก้ไข</a>
-                        <a href="delete_user.php?userid=<?= $user['UserID']; ?>" class="btn btn-danger"
+                        <a href="#" id="deleteUserBtn" class="btn btn-danger"
                             onclick="return confirm('คุณต้องการลบผู้ใช้งานนี้หรือไม่?');">ลบ</a>
                     </div>
                 </div>
             </div>
         </div>
     </div>
+
 
     <!-- Bootstrap JS -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
@@ -217,6 +218,7 @@ $conn->close();
             document.getElementById('editUserBtn').setAttribute('href', `edit_user.php?userid=${userId}`);
             document.getElementById('deleteUserBtn').setAttribute('href', `delete_user.php?userid=${userId}`);
         });
+
     </script>
 </body>
 

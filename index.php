@@ -290,6 +290,7 @@ $chartLabels = json_encode(array_map(function ($leave) {
             <div class="buttons">
                 <?php if ($role === 'Employee'): ?>
                     <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
+                    <a href="edit_user.php?userid=<?= $_SESSION['UserID']; ?>" class="btn btn-primary">แก้ไขข้อมูลส่วนตัว</a>
                 <?php endif; ?>
                 <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>

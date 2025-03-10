@@ -7,11 +7,6 @@ if (!isset($_SESSION['Username'])) {
     exit;
 }
 
-// ตรวจสอบบทบาทของผู้ใช้
-if ($_SESSION['Role'] !== 'Admin') {
-    die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
-}
-
 include('connect.php');
 
 // ตรวจสอบว่ามีการส่ง parameter `userid` มาหรือไม่
@@ -20,10 +15,16 @@ if (!isset($_GET['userid'])) {
     exit;
 }
 
+
 $userID = intval($_GET['userid']);
 
+// ตรวจสอบว่าผู้ใช้เป็นคนที่ต้องการแก้ไขข้อมูลหรือไม่
+if ($_SESSION['UserID'] !== $userID && $_SESSION['Role'] !== 'Admin') {
+    die("คุณไม่มีสิทธิ์เข้าถึงหน้านี้");
+}
+
 // ดึงข้อมูลผู้ใช้งานที่ต้องการแก้ไข
-$stmt = $conn->prepare("SELECT Username, FirstName, LastName, Email, Role, profile_picture FROM users WHERE UserID = ?");
+$stmt = $conn->prepare("SELECT Username, FirstName, LastName, Email, Role, profile_picture, Signature FROM users WHERE UserID = ?");
 $stmt->bind_param("i", $userID);
 $stmt->execute();
 $result = $stmt->get_result();
@@ -51,7 +52,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
     // รับและกรองข้อมูลจากฟอร์ม
     $password = trim($_POST['password']);
     $email = trim($_POST['email']);
-    $role = trim($_POST['role']);
+    // ตรวจสอบค่าของ 'role' ก่อนที่จะใช้งาน
+    $role = isset($_POST['role']) ? trim($_POST['role']) : $user['Role'];  // กำหนดค่า default เป็นค่าจากฐานข้อมูลถ้าไม่มีการส่งมา
     $firstname = trim($_POST['firstname']);
     $lastname = trim($_POST['lastname']);
 
@@ -61,11 +63,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
     } else {
         // จำกัดบทบาทที่ Admin สามารถตั้งได้
         $allowed_roles = ['Director', 'Leader', 'Leader2', 'Leader3', 'Admin', 'Employee'];
-        if (!in_array($role, $allowed_roles)) {
+        if ($_SESSION['Role'] !== 'Admin' && !in_array($role, ['Employee', 'Leader', 'Leader2', 'Leader3', 'Director'])) {
             $error = "ไม่สามารถตั้งบทบาทนี้ได้";
         } else {
-            // จัดการการอัปโหลดไฟล์โปรไฟล์ (ถ้ามี)
-            $profile_picture = $user['profile_picture'];
+            // จัดการการอัปโหลดไฟล์โปรไฟล์
+            $profile_picture = $profile_picture; // ใช้โปรไฟล์เดิมหากไม่มีการอัปโหลดใหม่
             if (isset($_FILES['profile_picture']) && $_FILES['profile_picture']['error'] === UPLOAD_ERR_OK) {
                 $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
                 $file_type = mime_content_type($_FILES['profile_picture']['tmp_name']);
@@ -80,40 +82,68 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                 }
 
                 if (!isset($error)) {
-                    $target_dir = "uploads/";
-                    // สร้างชื่อไฟล์แบบไม่ซ้ำกัน
-                    $file_extension = pathinfo($_FILES['profile_picture']['name'], PATHINFO_EXTENSION);
-                    $unique_name = uniqid('profile_', true) . '.' . $file_extension;
-                    $target_file = $target_dir . $unique_name;
+                    // อ่านเนื้อหาของไฟล์แล้วแปลงเป็น base64
+                    $image_data = file_get_contents($_FILES['profile_picture']['tmp_name']);
+                    $base64_image = base64_encode($image_data);
 
-                    if (!move_uploaded_file($_FILES['profile_picture']['tmp_name'], $target_file)) {
-                        $error = "ไม่สามารถอัปโหลดรูปภาพได้";
-                    } else {
-                        $profile_picture = $target_file;
-                        // ลบไฟล์เก่า
-                        if (!empty($user['profile_picture']) && file_exists($user['profile_picture'])) {
-                            unlink($user['profile_picture']);
-                        }
-                    }
+                    // เก็บรูปแบบ base64 พร้อม MIME type
+                    $profile_picture = "data:$file_type;base64," . $base64_image;
                 }
+            }
+
+            // รับลายเซ็นจากการเขียนหรืออัปโหลด
+            $signature_data = isset($_POST['signature_data']) ? $_POST['signature_data'] : null;
+            $signature_image = NULL;
+
+            if ($signature_data) {
+                $signature_image = $signature_data;
+            }
+
+            if (isset($_FILES['signature_image']) && $_FILES['signature_image']['error'] === UPLOAD_ERR_OK) {
+                $allowed_types = ['image/jpeg', 'image/png', 'image/gif'];
+                $file_type = mime_content_type($_FILES['signature_image']['tmp_name']);
+
+                if (!in_array($file_type, $allowed_types)) {
+                    $error = "รูปภาพลายเซ็นต้องเป็นไฟล์ประเภท JPG, PNG, หรือ GIF";
+                }
+
+                if ($_FILES['signature_image']['size'] > 2 * 1024 * 1024) {
+                    $error = "ขนาดไฟล์รูปภาพลายเซ็นต้องไม่เกิน 2MB";
+                }
+
+                if (!isset($error)) {
+                    $image_data = file_get_contents($_FILES['signature_image']['tmp_name']);
+                    $base64_image = base64_encode($image_data);
+                    $signature_image = "data:$file_type;base64," . $base64_image;
+                }
+            }
+
+            if (!$signature_image) {
+                $error = "กรุณากรอกหรืออัปโหลดลายเซ็น";
             }
 
             if (!isset($error)) {
                 // แฮชรหัสผ่านถ้ามีการเปลี่ยนแปลง
                 if (!empty($password)) {
                     $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $sql = "UPDATE users SET Password = ?, Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
+                    $sql = "UPDATE users SET Password = ?, Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ?, Signature = ? WHERE UserID = ?";
                     $stmt_update = $conn->prepare($sql);
-                    $stmt_update->bind_param("ssssssi", $hashed_password, $email, $firstname, $lastname, $role, $profile_picture, $userID);
+                    $stmt_update->bind_param("sssssssi", $hashed_password, $email, $firstname, $lastname, $role, $profile_picture, $signature_image, $userID);
                 } else {
-                    $sql = "UPDATE users SET Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ? WHERE UserID = ?";
+                    $sql = "UPDATE users SET Email = ?, FirstName = ?, LastName = ?, Role = ?, profile_picture = ?, Signature = ? WHERE UserID = ?";
                     $stmt_update = $conn->prepare($sql);
-                    $stmt_update->bind_param("sssssi", $email, $firstname, $lastname, $role, $profile_picture, $userID);
+                    $stmt_update->bind_param("ssssssi", $email, $firstname, $lastname, $role, $profile_picture, $signature_image, $userID);
                 }
 
-                // ตรวจสอบว่าการอัปเดตข้อมูลสำเร็จหรือไม่
                 if ($stmt_update->execute()) {
-                    header("Location: manage_users.php?success=แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+                    // ตรวจสอบว่าผู้ใช้เป็น Admin หรือไม่
+                    if ($_SESSION['Role'] === 'Admin') {
+                        // หากเป็น Admin, redirect ไปยัง manage_users.php
+                        header("Location: manage_users.php?success=แก้ไขข้อมูลผู้ใช้งานสำเร็จ");
+                    } else {
+                        // หากไม่ใช่ Admin, redirect ไปยัง index.php
+                        header("Location: index.php");
+                    }
                     exit();
                 } else {
                     $error = "เกิดข้อผิดพลาดในการแก้ไขข้อมูลผู้ใช้งาน: " . htmlspecialchars($stmt_update->error);
@@ -126,8 +156,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
 
     $conn->close();
 }
-
 ?>
+
 <!DOCTYPE html>
 <html lang="th">
 
@@ -171,20 +201,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
 </head>
 
 <body>
-    <!-- Header -->
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark fixed-top">
-        <div class="container-fluid">
-            <span class="navbar-brand">ระบบการลาของบุคลากร มหาวิทยาลัยมหาสารคาม</span>
-            <div class="d-flex">
-                <span class="navbar-text me-3">ยินดีต้อนรับ, <?= htmlspecialchars($_SESSION['Username']); ?></span>
-                <form method="POST" action="logout.php" class="d-inline">
-                    <button type="submit" name="logout" class="btn btn-outline-light">ออกจากระบบ</button>
-                </form>
-            </div>
-        </div>
-    </nav>
-
-    <!-- Main Container -->
     <div class="container">
         <div class="form-container">
             <h2 class="text-center mb-4">แก้ไขข้อมูลผู้ใช้งาน</h2>
@@ -222,21 +238,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                 </div>
                 <div class="mb-3">
                     <label for="role" class="form-label">ตำแหน่ง:</label>
-                    <select id="role" name="role" class="form-select" required>
+                    <select id="role" name="role" class="form-select" required <?= ($_SESSION['Role'] !== 'Admin') ? 'disabled' : ''; ?>>
                         <option value="">-- เลือกตำแหน่ง --</option>
-                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>อธิบดี
-                            (Director)</option>
-                        <option value="Leader" <?= ($user['Role'] === 'Leader') ? 'selected' : ''; ?>>หัวหน้า
-                            (Leader)</option>
-                        <option value="Leader2" <?= ($user['Role'] === 'Leader2') ? 'selected' : ''; ?>>หัวหน้า2
-                            (Leader2)</option>
-                        <option value="Leader3" <?= ($user['Role'] === 'Leader3') ? 'selected' : ''; ?>>หัวหน้า3
-                            (Leader3)</option>
+                        <option value="Director" <?= ($user['Role'] === 'Director') ? 'selected' : ''; ?>>อธิบดี (Director)
+                        </option>
+                        <option value="Leader" <?= ($user['Role'] === 'Leader') ? 'selected' : ''; ?>>หัวหน้า (Leader)
+                        </option>
+                        <option value="Leader2" <?= ($user['Role'] === 'Leader2') ? 'selected' : ''; ?>>หัวหน้า2 (Leader2)
+                        </option>
+                        <option value="Leader3" <?= ($user['Role'] === 'Leader3') ? 'selected' : ''; ?>>หัวหน้า3 (Leader3)
+                        </option>
                         <option value="Admin" <?= ($user['Role'] === 'Admin') ? 'selected' : ''; ?>>ผู้ดูแลระบบ (Admin)
                         </option>
                         <option value="Employee" <?= ($user['Role'] === 'Employee') ? 'selected' : ''; ?>>พนักงาน
-                            (Employee)
-                        </option>
+                            (Employee)</option>
                     </select>
                 </div>
                 <div class="mb-3">
@@ -250,16 +265,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_user'])) {
                         </div>
                     <?php endif; ?>
                 </div>
+                <div class="mb-3">
+                    <label for="signature" class="form-label">ลายเซ็น</label>
+                    <div class="canvas-container">
+                        <canvas id="signatureCanvas" width="400" height="200"
+                            style="border: 2px dashed #ccc; border-radius: 10px;"></canvas>
+                    </div>
+                    <div class="d-flex justify-content-between mt-2">
+                        <button type="button" class="btn btn-outline-secondary" id="clearCanvas">ล้างลายเซ็น</button>
+                        <span class="text-muted" id="clearMessage" style="display: none;">ลายเซ็นถูกล้างแล้ว</span>
+                    </div>
+                    <input type="hidden" name="signature_data" id="signature_data">
+                </div>
+                <div class="mb-3">
+                    <label for="signature_image" class="form-label">หรืออัปโหลดลายเซ็น</label>
+                    <input type="file" class="form-control" name="signature_image" id="signature_image"
+                        accept="image/*">
+                </div>
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
                 <button type="submit" name="update_user" class="btn btn-primary w-100">อัปเดตข้อมูล</button>
             </form>
-            <a href="manage_users.php" class="btn-back">ย้อนกลับ</a>
+            <?php
+            // ตรวจสอบบทบาทของผู้ใช้
+            if ($_SESSION['Role'] === 'Admin') {
+                $redirect_link = "manage_users.php";
+            } else {
+                $redirect_link = "index.php";
+            }
+            ?>
+            <a href="<?= $redirect_link ?>" class="btn-back">ย้อนกลับ</a>
         </div>
     </div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // ฟังก์ชันในการเริ่มต้นการวาด
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        // ฟังก์ชันในการลาก
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+
+        // ฟังก์ชันในการหยุดการวาด
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        // ฟังก์ชันในการเคลียร์ canvas
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('signature_data').value = ''; // ลบข้อมูล base64
+            document.getElementById('clearMessage').style.display = 'inline'; // แสดงข้อความล้างลายเซ็น
+        });
+
+        // เมื่อฟอร์มถูกส่ง จะทำการแปลง canvas เป็น base64
+        document.querySelector('form').addEventListener('submit', () => {
+            const signatureData = canvas.toDataURL();
+            document.getElementById('signature_data').value = signatureData;
+        });
+    </script>
+
 </body>
 
 </html>
