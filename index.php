@@ -243,6 +243,9 @@ $chartLabels = json_encode(array_map(function ($leave) {
             </div>
         </div>
     </nav>
+    <div class="leave-section">
+    <?php include 'leave_summary.php'; ?>
+    </div>
 
     <!-- Main Container -->
     <div class="container">
@@ -309,7 +312,6 @@ $chartLabels = json_encode(array_map(function ($leave) {
                 <!-- รายการชื่อประเภทการลาจะถูกเติมที่นี่โดย JavaScript -->
             </div>
         </div>
-
         <!-- Table Section -->
         <div class="table-container">
             <h3 class="text-center">
