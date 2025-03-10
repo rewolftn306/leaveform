@@ -120,7 +120,12 @@ $_SESSION['tableData'] = $tableData;
 $chartLabels = json_encode(array_map(function ($leave) {
     return $leave;
 }, array_values($leaveTypes)));
-$chartValues = json_encode(array_values($chartData));
+// แปลงข้อมูลจำนวนวันลาในแต่ละประเภทให้เป็น JSON
+$chartValues = json_encode(array_values($chartData));  // จำนวนวันลา
+$chartLabels = json_encode(array_map(function ($leave) {
+    return $leave;
+}, array_values($leaveTypes))); // ชื่อประเภทการลา
+
 ?>
 
 <!DOCTYPE html>
@@ -401,16 +406,16 @@ $chartValues = json_encode(array_values($chartData));
         ];
 
 
-        // การแสดงกราฟ
+        // การแสดงกราฟแบบโดนัท (Pie Chart หรือ Doughnut Chart)
+        // การแสดงกราฟแบบโดนัท (Pie Chart หรือ Doughnut Chart)
         const ctx = document.getElementById('leaveChart').getContext('2d');
         const leaveChart = new Chart(ctx, {
-            type: 'bar', // ใช้กราฟแท่ง
+            type: 'pie', // ใช้กราฟวงกลมหรือกราฟโดนัท
             data: {
-                labels: <?= $chartLabels; ?>,
+                labels: <?= $chartLabels; ?>, // ใช้ข้อความที่รวมประเภทการลาและจำนวนวัน
                 datasets: [{
-                    label: 'จำนวนวันลา',
-                    data: <?= $chartValues; ?>,
-                    backgroundColor: chartColors.slice(0, <?= count($leaveTypes); ?>), // ใช้จำนวนสีที่ตรงกับจำนวนประเภทการลา
+                    data: <?= $chartValues; ?>,  // ข้อมูลจำนวนวันลา
+                    backgroundColor: chartColors.slice(0, <?= count($leaveTypes); ?>), // ใช้สีที่ตรงกับจำนวนประเภทการลา
                     borderColor: chartColors.slice(0, <?= count($leaveTypes); ?>), // ใช้สีเดียวกันในกราฟ
                     borderWidth: 1
                 }]
@@ -418,40 +423,38 @@ $chartValues = json_encode(array_values($chartData));
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
-                scales: {
-                    x: {
-                        ticks: {
-                            display: false
-                        }
-                    },
-                    y: {
-                        beginAtZero: true,
-                        ticks: {
-                            precision: 0
-                        }
-                    }
-                },
                 plugins: {
-                    legend: {
-                        display: false // ปิดการแสดงผล legend ในกราฟ
-                    },
                     tooltip: {
                         callbacks: {
                             title: function (tooltipItem) {
-                                return tooltipItem[0].label;
+                                return tooltipItem[0].label; // แสดงชื่อประเภทการลาและจำนวนวัน
                             },
                             label: function (tooltipItem) {
-                                return tooltipItem.raw + ' วัน';
+                                return tooltipItem.raw + ' วัน'; // แสดงจำนวนวันลา
                             }
+                        }
+                    },
+                    legend: {
+                        position: 'bottom', // จัดตำแหน่ง legend ที่ด้านล่างของกราฟ
+                        labels: {
+                            font: {
+                                size: 14
+                            },
+                            boxWidth: 20
                         }
                     }
                 }
             }
         });
 
-        // แสดงชื่อประเภทการลาและสีภายนอกกราฟ
+
+
+        // แสดงชื่อประเภทการลาและจำนวนวันลาในกราฟและข้อความ
         const leaveTypes = <?= $chartLabels; ?>;
+        const leaveDays = <?= json_encode(array_values($chartData)); ?>; // เก็บข้อมูลจำนวนวันลาแต่ละประเภท
         const legendContainer = document.getElementById('leaveTypesLegend');
+
+        // วนลูปเพื่อแสดงประเภทการลาและจำนวนวัน
         leaveTypes.forEach((leaveType, index) => {
             const legendItem = document.createElement('div');
             legendItem.classList.add('legend-item');
@@ -461,12 +464,13 @@ $chartValues = json_encode(array_values($chartData));
             colorBox.style.backgroundColor = chartColors[index];
 
             const label = document.createElement('span');
-            label.innerText = leaveType;
+            label.innerText = `${leaveType} = ${leaveDays[index]} วัน`; // แสดงประเภทการลาและจำนวนวัน
 
             legendItem.appendChild(colorBox);
             legendItem.appendChild(label);
             legendContainer.appendChild(legendItem);
         });
+
 
     </script>
     <script>
