@@ -93,7 +93,7 @@ function convertThai($text)
     return iconv("UTF-8", "Windows-874//IGNORE", $text);
 }
 
-function convertToThaiDate($date, $isCreateDate = false)
+function convertToThaiDate($date, $isCreateDate = false, $isBirthDate = false)
 {
     // อาเรย์ของชื่อเดือนในภาษาไทย
     $thaiMonths = [
@@ -122,6 +122,8 @@ function convertToThaiDate($date, $isCreateDate = false)
     // หากเป็น CreateDate ให้เว้นวรรคเพียง 1 ช่อง
     if ($isCreateDate) {
         return $day . '             ' . $thaiMonths[$month] . '               ' . $year;
+    } elseif ($isBirthDate) {
+        return $day . '             ' . $thaiMonths[$month] . '                   ' . $year; // วันเกิดให้เว้นช่องระหว่างวัน เดือน ปี 1 ช่อง
     } else {
         // สำหรับ StartDate และ EndDate ให้เว้นวรรค 2 ช่อง
         return $day . '  ' . $thaiMonths[$month] . '  ' . $year;
@@ -145,9 +147,49 @@ function calculateLeaveDays($startDate, $endDate)
     $endTimestamp = strtotime($endDate);
 
     // คำนวณจำนวนวัน
-    $diffInDays = ($endTimestamp - $startTimestamp) / (60 * 60 * 24) + 0; // บวก 1 เพื่อรวมวันสุดท้าย
+    $diffInDays = ($endTimestamp - $startTimestamp) / (60 * 60 * 24) + 0;
 
     return $diffInDays;
+}
+
+// ฟังก์ชันเพื่อดึงข้อมูลการลาครั้งล่าสุดสำหรับประเภทที่กำหนด
+function getLastLeaveByType($userId, $leaveTypeId, $conn)
+{
+    // ดึงข้อมูลการลาครั้งล่าสุดที่มีสถานะเป็น "Approved"
+    $sql = "SELECT * FROM leaveapplications 
+            WHERE UserID = ? AND LeaveTypeID = ? AND ApprovalStatus = 'Approved'
+            ORDER BY CreateDate DESC LIMIT 1";
+    $stmt = $conn->prepare($sql);
+    $stmt->bind_param("ii", $userId, $leaveTypeId);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        return $result->fetch_assoc();  // ส่งกลับข้อมูลการลาครั้งล่าสุด
+    }
+    return null;  // หากไม่มีการลาครั้งล่าสุดที่สถานะ Approved
+}
+
+
+// ดึงข้อมูลการลาครั้งล่าสุดตามประเภทการลา
+$lastLeaveData = null;
+if ($leaveType == 'ลาป่วย') {
+    $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 1, $conn);  // 1 = ลาป่วย
+} elseif ($leaveType == 'ลากิจส่วนตัว') {
+    $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 2, $conn);  // 2 = ลากิจส่วนตัว
+} elseif ($leaveType == 'การลาคลอดบุตร') {
+    $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 3, $conn);  // 3 = การลาคลอดบุตร
+}
+
+
+
+// ถ้ามีข้อมูลการลาครั้งล่าสุด
+if ($lastLeaveData) {
+    $lastLeaveStartDate = convertToThaiDate($lastLeaveData['StartDate']);
+    $lastLeaveEndDate = convertToThaiDate($lastLeaveData['EndDate']);
+    $lastLeaveRemarks = htmlspecialchars($lastLeaveData['Remarks']);
+
+    // คำนวณจำนวนวันลา
+    $lastleaveDays = calculateLeaveDays($lastLeaveData['StartDate'], $lastLeaveData['EndDate']);
 }
 
 // ดึงข้อมูลลายเซ็นจากฐานข้อมูล
@@ -184,6 +226,13 @@ $signatureHeight = 10; // ความสูง
 
 // รับตัวแปรจาก URL
 $contactInfo = isset($_GET['contact_info']) ? $_GET['contact_info'] : '';
+$assignWork = isset($_GET['assign_work']) ? $_GET['assign_work'] : '';
+$workReplacement = isset($_GET['work_replacement']) ? $_GET['work_replacement'] : '';
+$birthDate = isset($_GET['birth_date']) ? $_GET['birth_date'] : '';
+$ordinationStatus = isset($_GET['ordination_status']) ? $_GET['ordination_status'] : '';
+$ordinationWat = isset($_GET['ordination_wat']) ? $_GET['ordination_wat'] : '';
+$ordinationDate = isset($_GET['ordination_date']) ? $_GET['ordination_date'] : '';
+$ordinationAddress = isset($_GET['ordination_address']) ? $_GET['ordination_address'] : '';
 
 // Insert data based on the template
 switch ($leaveType) {
@@ -216,6 +265,13 @@ switch ($leaveType) {
         $pdf->Image($tempImageFile, 135, 123, $signatureWidth, $signatureHeight);
         $pdf->SetXY(28, 108);
         $pdf->Write(0, convertThai(' ' . $contactInfo));
+        $pdf->SetXY(155, 95);
+        $pdf->Write(0, '' . convertThai($lastLeaveStartDate));
+        $pdf->SetXY(43, 101.25);
+        $pdf->Write(0, '' . convertThai($lastLeaveEndDate));
+        $pdf->SetXY(99, 101.25);  // ปรับตำแหน่งที่ต้องการ
+        $pdf->Write(0, '' . $lastleaveDays . '');
+
 
         switch ($leaveType) {
             case 'ลาป่วย':
@@ -260,6 +316,7 @@ switch ($leaveType) {
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
         $formattedStartDate = convertToThaiDate($leaveData['StartDate']);
         $formattedEndDate = convertToThaiDate($leaveData['EndDate']);
+        $formattedBirthDate = convertToThaiDate($birthDate, false, true);  // ใช้ $isBirthDate = true
         $formattedCreatedAtDate = convertToThaiDate($leaveData['CreatedAt']);
         $pdf->SetXY(124, 35.25);
         $pdf->Write(0, convertThai('' . $formattedDate));
@@ -280,6 +337,23 @@ switch ($leaveType) {
         $pdf->SetXY(117, 156.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 119, 142, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(41, 85);
+        $pdf->Write(0, convertThai('' . $formattedBirthDate));
+        if ($ordinationStatus == "เคยอุปสมบท") {
+            drawTick($pdf, 92, 90, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }if ($ordinationStatus == "ยังไม่เคยอุปสมบท") {
+            drawTick($pdf, 49, 91, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }
+        $pdf->SetXY(37, 97.5);
+        $pdf->Write(0, convertThai('' . $ordinationWat));
+        $pdf->SetXY(45, 110);
+        $pdf->Write(0, convertThai('' . $ordinationDate));
+        $pdf->SetXY(28, 103);
+        $pdf->Write(0, convertThai('' . $ordinationAddress));
+        $pdf->SetXY(127, 107.5);
+        $pdf->Write(0, convertThai('' . $ordinationWat));
+        $pdf->SetXY(45, 115.5);
+        $pdf->Write(0, convertThai('' . $ordinationAddress));
         break;
 
     case 'ลาพักผ่อน':
@@ -304,6 +378,15 @@ switch ($leaveType) {
         $pdf->SetXY(101, 123.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 110, 109, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(80, 88);
+        $pdf->Write(0, convertThai(' ' . $contactInfo));
+        $pdf->SetXY(146, 234);
+        $pdf->Write(0, convertThai('' . $assignWork));
+        $pdf->SetXY(71, 240.5);
+        $pdf->Write(0, convertThai('' . $workReplacement));
+        $pdf->SetXY(137, 272.25);
+        $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+        $pdf->Image($tempImageFile, 140, 258, $signatureWidth, $signatureHeight);
         break;
 
     case 'ขอยกเลิกวันลา':
@@ -394,8 +477,8 @@ $stmt->close();
 $conn->close();
 
 // Display success message and redirect to index.php
-echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
+//echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
 
 //for debug
-//$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
+$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>

@@ -152,6 +152,57 @@ if (isset($_GET['success'])) {
                     <input type="text" id="contact_info" name="contact_info" class="form-control"
                         placeholder="กรอกข้อมูลการติดต่อ" maxlength="100">
                 </div>
+                <!-- ช่องกรอกข้อมูลสำหรับการมอบหมายงานระหว่างลา -->
+                <div id="work_assignment_section" class="mb-3" style="display: none;">
+                    <label for="assign_work" class="form-label">มอบหมายงานระหว่างลาให้:</label>
+                    <input type="text" id="assign_work" name="assign_work" class="form-control"
+                        placeholder="ขอมอบหมายให้" maxlength="100">
+                </div>
+
+                <!-- ช่องกรอกข้อมูลสำหรับผู้ปฏิบัติงานแทน -->
+                <div id="work_replacement_section" class="mb-3" style="display: none;">
+                    <label for="work_replacement" class="form-label">เป็นผู้ปฏิบัติงานแทน ดังนี้:</label>
+                    <input type="text" id="work_replacement" name="work_replacement" class="form-control"
+                        placeholder="งานที่มอบหมาย" maxlength="100">
+                </div>
+
+                <!-- ช่องกรอกข้อมูลสำหรับวันเกิด -->
+                <div class="ordination_section mb-3" style="display: none;">
+                    <label for="birth_date" class="form-label">วันเกิด:</label>
+                    <input type="text" id="birth_date" name="birth_date" class="form-control"
+                        placeholder="กรอกวันเกิด (เช่น 01 เมษายน 2565)" required>
+                </div>
+
+
+                <!-- ช่องกรอกข้อมูลสำหรับเคยอุปสมบทหรือไม่ -->
+                <div class="ordination_section mb-3" style="display: none;">
+                    <label for="ordination_status" class="form-label">เคยอุปสมบท:</label>
+                    <select id="ordination_status" name="ordination_status" class="form-select">
+                        <option value="เคยอุปสมบท">เคยอุปสมบท</option>
+                        <option value="ยังไม่เคยอุปสมบท">ยังไม่เคยอุปสมบท</option>
+                    </select>
+                </div>
+
+                <!-- ช่องกรอกข้อมูลสำหรับวัดที่อุปสมบท -->
+                <div class="ordination_section mb-3" style="display: none;">
+                    <label for="ordination_wat" class="form-label">วัดที่จะอุปสมบท:</label>
+                    <input type="text" id="ordination_wat" name="ordination_wat" class="form-control"
+                        placeholder="กรอกชื่อวัดที่อุปสมบท">
+                </div>
+
+                <!-- ช่องกรอกข้อมูลสำหรับที่อยู่วัด -->
+                <div class="ordination_section mb-3" style="display: none;">
+                    <label for="ordination_address" class="form-label">ที่อยู่วัด:</label>
+                    <textarea id="ordination_address" name="ordination_address" class="form-control"
+                        placeholder="กรอกที่อยู่วัด"></textarea>
+                </div>
+
+                <!-- ช่องกรอกข้อมูลสำหรับกำหนดวันที่จำพรรษา -->
+                <div class="ordination_section mb-3" style="display: none;">
+                    <label for="ordination_date" class="form-label">กำหนดวันที่จำพรรษา:</label>
+                    <textarea id="ordination_date" name="ordination_date" class="form-control"
+                        placeholder="กรอกวันที่ (เช่น 01 เมษายน 2565)"></textarea>
+                </div>
 
 
 
@@ -170,12 +221,35 @@ if (isset($_GET['success'])) {
         // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
             const additionalOptionsSection = document.getElementById('additional_options');
+            const workAssignmentSection = document.getElementById('work_assignment_section'); // Section สำหรับมอบหมายงาน
+            const workReplacementSection = document.getElementById('work_replacement_section');
+            const ordinationSections = document.querySelectorAll('.ordination_section'); // เลือกทุกๆ ordination_section
 
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
                 additionalOptionsSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
             } else {
                 additionalOptionsSection.style.display = 'none'; // ซ่อนตัวเลือก
+            }
+
+            // เพิ่มเงื่อนไขใหม่สำหรับ "ลาพักผ่อน"
+            if (leaveTypeID == 3) { // สมมติว่า LeaveTypeID 3 คือ ลาพักผ่อน
+                workAssignmentSection.style.display = 'block';  // แสดงฟอร์มมอบหมายงานระหว่างลา
+                workReplacementSection.style.display = 'block';
+            } else {
+                workAssignmentSection.style.display = 'none';   // ซ่อนฟอร์มมอบหมายงาน
+                workReplacementSection.style.display = 'none';
+            }
+
+            // เพิ่มเงื่อนไขสำหรับ "ลาบวช/ประกอบพิธีฮัจย์" และ "ลาไปถือศีลและปฏิบัติธรรม"
+            if (leaveTypeID == 4 || leaveTypeID == 5) {  // สมมติว่า LeaveTypeID 4 คือ ลาบวช/ประกอบพิธีฮัจย์ และ LeaveTypeID 5 คือ ลาไปถือศีล
+                ordinationSections.forEach(section => {
+                    section.style.display = 'block';  // แสดงฟอร์มข้อมูลอุปสมบท
+                });
+            } else {
+                ordinationSections.forEach(section => {
+                    section.style.display = 'none';   // ซ่อนฟอร์มข้อมูลอุปสมบท
+                });
             }
 
             // เรียก fetchConditions() เพื่อนำข้อมูลเงื่อนไขการลา

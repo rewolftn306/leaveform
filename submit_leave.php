@@ -34,7 +34,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $remarks = sanitize_input($_POST['remarks']);
     $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;  // ตัวเลือกการแนบไฟล์หรือขอจัดส่ง
     $contactInfo = isset($_POST['contact_info']) ? sanitize_input($_POST['contact_info']) : '';
-
+    $assignWork = isset($_POST['assign_work']) ? sanitize_input($_POST['assign_work']) : '';
+    $workReplacement = isset($_POST['work_replacement']) ? sanitize_input($_POST['work_replacement']) : '';
+    $birthDate = isset($_POST['birth_date']) ? sanitize_input($_POST['birth_date']) : '';
+    $ordinationStatus = isset($_POST['ordination_status']) ? sanitize_input($_POST['ordination_status']) : '';
+    $ordinationWat = isset($_POST['ordination_wat']) ? sanitize_input($_POST['ordination_wat']) : '';
+    $ordinationAddress = isset($_POST['ordination_address']) ? sanitize_input($_POST['ordination_address']) : '';
+    $ordinationDate = isset($_POST['ordination_date']) ? sanitize_input($_POST['ordination_date']) : '';
 
     // รับ UserID จาก Session
     $userID = intval($_SESSION['UserID']);
@@ -123,9 +129,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // ส่งข้อความไปยัง Google Chat
         sendGoogleChatNotification($message);
 
-        // เปลี่ยนเส้นทางไปยังหน้า generate_pdf.php พร้อมกับ application_id และ contact_info
-        header("Location: generate_pdf.php?id=" . $application_id . "&contact_info=" . urlencode($contactInfo));
+        header("Location: generate_pdf.php?id=" . $application_id .
+            "&contact_info=" . urlencode($contactInfo) .
+            "&assign_work=" . urlencode($assignWork) .
+            "&work_replacement=" . urlencode($workReplacement) .
+            "&birth_date=" . urlencode($birthDate) .
+            "&ordination_status=" . urlencode($ordinationStatus) .
+            "&ordination_wat=" . urlencode($ordinationWat) .
+            "&ordination_date=" . urlencode($ordinationDate) . // ส่งตัวแปร ordination_date
+            "&ordination_address=" . urlencode($ordinationAddress));
         exit();
+
     } else {
         error_log("Execute failed: " . $stmt->error);
         header("Location: inputform.php?error=เกิดข้อผิดพลาดในการส่งคำขอการลา");
