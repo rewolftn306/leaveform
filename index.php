@@ -9,6 +9,7 @@ if (!isset($_SESSION['Username'])) {
 
 include('connect.php');
 
+
 // ตรวจสอบการเชื่อมต่อ
 if ($conn->connect_error) {
     die("Connection failed: " . $conn->connect_error);
@@ -24,14 +25,14 @@ $result = $stmt->get_result();
 $firstname = '';
 $lastname = '';
 $role = '';
-$profile_picture = ''; // ตัวแปรสำหรับรูปโปรไฟล์
+$profile_picture = '';
 
 if ($result->num_rows > 0) {
     $row = $result->fetch_assoc();
     $firstname = htmlspecialchars($row['firstname']);
     $lastname = htmlspecialchars($row['lastname']);
     $role = htmlspecialchars($row['role']);
-    $profile_picture = $row['profile_picture']; // ดึงรูปโปรไฟล์
+    $profile_picture = $row['profile_picture'];
 } else {
     echo "ไม่พบข้อมูลผู้ใช้";
     exit;
@@ -47,7 +48,7 @@ if ($role === 'Admin' || $role === 'Director' || $role === 'Leader' || $role ===
             LEFT JOIN leaveapplications la ON u.UserID = la.UserID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE la.LeaveTypeID IS NOT NULL
-            ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
+            ORDER BY la.CreateDate DESC";
     $stmt = $conn->prepare($sql);
     $stmt->execute();
 } else {
@@ -57,17 +58,17 @@ if ($role === 'Admin' || $role === 'Director' || $role === 'Leader' || $role ===
             LEFT JOIN leaveapplications la ON u.UserID = la.UserID
             LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
             WHERE u.Username = ? AND la.LeaveTypeID IS NOT NULL
-            ORDER BY la.CreateDate DESC";  // เรียงตาม CreateDate ล่าสุดไปเก่า
+            ORDER BY la.CreateDate DESC";
     $stmt = $conn->prepare($sql);
     $stmt->bind_param("s", $user_name);
     $stmt->execute();
 }
 
-
-
 $result = $stmt->get_result();
-
+// ตัวแปรเก็บข้อมูลสำหรับตาราง (ไม่กรองสถานะ)
 $tableData = [];
+
+// ตัวแปรเก็บข้อมูลกราฟ (กรองเฉพาะสถานะ "Approved")
 $chartData = [];
 $leaveTypes = [];
 
@@ -77,14 +78,9 @@ if ($result) {
         $start_date = new DateTime($row['StartDate']);
         $end_date = new DateTime($row['EndDate']);
         $interval = $start_date->diff($end_date);
-        $leave_days = $interval->days; // นับจำนวนวันไม่รวมวันเริ่ม
-        if ($start_date != $end_date) {
-            $leave_days = $interval->days; // ถ้า StartDate ไม่เหมือน EndDate จะคำนวณจำนวนวัน
-        } else {
-            $leave_days = 1; // ถ้า StartDate กับ EndDate ตรงกัน ให้ถือว่าเป็น 1 วัน
-        }
+        $leave_days = $interval->days;
 
-        // เพิ่มข้อมูลลงในตาราง
+        // เพิ่มข้อมูลการลาเข้าใน $tableData (ข้อมูลทั้งหมดแสดงในตาราง)
         $tableData[] = [
             'user_id' => $row['UserID'] ?? null,
             'name' => htmlspecialchars($row['FirstName'] . ' ' . $row['LastName']),
@@ -97,16 +93,17 @@ if ($result) {
             'leave_days' => $leave_days,
         ];
 
-        // เก็บประเภทการลาเพื่อกราฟ
-        if (!in_array($row['leave_type'], $leaveTypes)) {
-            $leaveTypes[] = $row['leave_type'];
-        }
+        // ถ้าสถานะเป็น "Approved" ให้เพิ่มข้อมูลสำหรับกราฟ
+        if ($row['ApprovalStatus'] === 'Approved') {
+            if (!in_array($row['leave_type'], $leaveTypes)) {
+                $leaveTypes[] = $row['leave_type'];
+            }
 
-        // คำนวณจำนวนวันลาในกราฟ
-        if (!isset($chartData[$row['leave_type']])) {
-            $chartData[$row['leave_type']] = 0;
+            if (!isset($chartData[$row['leave_type']])) {
+                $chartData[$row['leave_type']] = 0;
+            }
+            $chartData[$row['leave_type']] += $leave_days;
         }
-        $chartData[$row['leave_type']] += $leave_days;
     }
 } else {
     error_log("Data Fetch Failed: " . $conn->error);
@@ -114,19 +111,13 @@ if ($result) {
 
 $conn->close();
 
-$_SESSION['tableData'] = $tableData;
-
-// แปลงข้อมูลกราฟให้เป็น JSON
+// แปลงข้อมูลกราฟให้เป็น JSON (เฉพาะข้อมูลที่มีสถานะ "Approved")
 $chartLabels = json_encode(array_map(function ($leave) {
     return $leave;
 }, array_values($leaveTypes)));
-// แปลงข้อมูลจำนวนวันลาในแต่ละประเภทให้เป็น JSON
-$chartValues = json_encode(array_values($chartData));  // จำนวนวันลา
-$chartLabels = json_encode(array_map(function ($leave) {
-    return $leave;
-}, array_values($leaveTypes))); // ชื่อประเภทการลา
 
-?>
+$chartValues = json_encode(array_values($chartData)); ?>
+
 
 <!DOCTYPE html>
 <html lang="th">
@@ -135,6 +126,7 @@ $chartLabels = json_encode(array_map(function ($leave) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>สถิติการลางาน</title>
+    <link id="favicon" rel="icon" href="default-favicon.ico" type="image/x-icon">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
@@ -243,10 +235,6 @@ $chartLabels = json_encode(array_map(function ($leave) {
             </div>
         </div>
     </nav>
-    <div class="leave-section">
-    <?php include 'leave_summary.php'; ?>
-    </div>
-
     <!-- Main Container -->
     <div class="container">
 
@@ -293,7 +281,8 @@ $chartLabels = json_encode(array_map(function ($leave) {
             <div class="buttons">
                 <?php if ($role === 'Employee'): ?>
                     <a href="inputform.php" class="btn btn-primary">ยื่นแบบฟอร์มการลา</a>
-                    <a href="edit_user.php?userid=<?= $_SESSION['UserID']; ?>" class="btn btn-primary">แก้ไขข้อมูลส่วนตัว</a>
+                    <a href="edit_user.php?userid=<?= $_SESSION['UserID']; ?>"
+                        class="btn btn-primary">แก้ไขข้อมูลส่วนตัว</a>
                 <?php endif; ?>
                 <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
@@ -337,7 +326,7 @@ $chartLabels = json_encode(array_map(function ($leave) {
                         <th>พิมพ์ PDF</th>
                     </tr>
                 </thead>
-                <tbody>
+                <tbody id="tableBody">
                     <?php if (!empty($tableData)): ?>
                         <?php foreach ($tableData as $index => $row): ?>
                             <tr>
@@ -345,11 +334,12 @@ $chartLabels = json_encode(array_map(function ($leave) {
                                 <td><?= $row['name']; ?></td>
                                 <td><?= $row['leave_type']; ?></td>
                                 <td><?= $row['start_date'] . ' - ' . $row['end_date']; ?></td>
-                                <td><?= $row['approval_status']; ?></td>
+                                <td id="leave-<?= $row['application_id']; ?>" class="status"><?= $row['approval_status']; ?>
+                                </td>
                                 <td><?= $row['leave_days']; ?> วัน</td>
                                 <td>
                                     <button class="btn btn-info" data-bs-toggle="modal" data-bs-target="#leaveDetailModal"
-                                        data-name="<?= $row['name']; ?>" data-start="<?= $row['start_date']; ?> "
+                                        data-name="<?= $row['name']; ?>" data-start="<?= $row['start_date']; ?>"
                                         data-end="<?= $row['end_date']; ?>" data-leave-type="<?= $row['leave_type']; ?>"
                                         data-status="<?= $row['approval_status']; ?>" data-remarks="<?= $row['remarks']; ?>"
                                         data-application-id="<?= $row['application_id']; ?>">
@@ -368,6 +358,7 @@ $chartLabels = json_encode(array_map(function ($leave) {
                         </tr>
                     <?php endif; ?>
                 </tbody>
+
             </table>
         </div>
 
@@ -408,8 +399,6 @@ $chartLabels = json_encode(array_map(function ($leave) {
             '#c2185b', '#1976d2'  // 2 สีสุดท้าย
         ];
 
-
-        // การแสดงกราฟแบบโดนัท (Pie Chart หรือ Doughnut Chart)
         // การแสดงกราฟแบบโดนัท (Pie Chart หรือ Doughnut Chart)
         const ctx = document.getElementById('leaveChart').getContext('2d');
         const leaveChart = new Chart(ctx, {
@@ -533,10 +522,95 @@ $chartLabels = json_encode(array_map(function ($leave) {
                 });
             }
         });
+        // ฟังก์ชันตรวจสอบสถานะการลา
+        function checkLeaveStatus() {
+            fetch('get_leave_status.php')  // URL สำหรับดึงสถานะการลา
+                .then(response => response.json())
+                .then(data => {
+                    data.forEach(leave => {
+                        const row = document.querySelector(`#leave-${leave.application_id}`); // ค้นหาตาม ApplicationID
+                        if (row) {
+                            const statusCell = row;
+                            if (statusCell && statusCell.textContent !== leave.status) {
+                                // การเปลี่ยนแปลงสถานะ
+                                statusCell.textContent = leave.status;
+                                if (leave.status === "Approved" || leave.status === "Rejected") {
+                                    showAlert(`สถานะการลาล่าสุด "${leave.leave_type}" มีสถานะเป็น: ${leave.status}`);
+                                    playNotificationSound(); // เล่นเสียงแจ้งเตือน
+                                    showRedDot(); // แสดงจุดแดงบนแท็บ
+                                }
+                            }
+                        }
+                    });
+                })
+                .catch(error => console.error('Error checking leave status:', error));
+        }
+
+        // ฟังก์ชันแสดงการแจ้งเตือน
+        function showAlert(message) {
+            // ตรวจสอบว่า alertBox ถูกสร้างขึ้นมาหรือยัง
+            console.log("Showing alert: ", message); // เพิ่มการตรวจสอบ
+            const alertBox = document.createElement('div');
+            alertBox.classList.add('alert', 'alert-info');
+            alertBox.textContent = message;
+            alertBox.style.position = "fixed";  // เพิ่มตำแหน่งที่แน่นอน
+            alertBox.style.top = "90px";        // ตำแหน่งจากด้านบน
+            alertBox.style.left = "50%";        // ตำแหน่งจากด้านซ้าย
+            alertBox.style.transform = "translateX(-50%)";  // จัดให้แสดงอยู่ตรงกลาง
+            alertBox.style.zIndex = "9999";     // ตรวจสอบว่าอยู่ด้านบนสุด
+
+            document.body.prepend(alertBox);
+
+            setTimeout(() => {
+                alertBox.remove();
+            }, 10000); // ปิดการแจ้งเตือนหลังจาก 10 วินาที
+        }
+        // ฟังก์ชันเล่นเสียงแจ้งเตือน
+        function playNotificationSound() {
+            const audio = new Audio('/leaveform/notification-sound.mp3'); // ใช้เส้นทางสัมพัทธ์จาก `htdocs`
+            audio.play();
+        }
+
+
+        // ฟังก์ชันแสดงจุดแดงบนแท็บ
+        function showRedDot() {
+            // เปลี่ยนชื่อแท็บ
+            const favicon = document.getElementById('favicon');
+            favicon.href = 'notification-favicon.svg'; // ใช้ไอคอนที่มีจุดแดง (เปลี่ยนเป็นไฟล์ของคุณ)
+
+            // คืนค่าชื่อแท็บหลังจาก 3 วินาที
+            setTimeout(() => {
+                favicon.href = 'default.svg'; // คืนค่า favicon เป็นไอคอนปกติ
+            }, 5000);
+        }
+
+        // เรียกใช้ฟังก์ชันทุกๆ 5 วินาที
+        setInterval(checkLeaveStatus, 5000);
 
     </script>
+    <script>
+        // ฟังก์ชันสำหรับอัปเดตกราฟ
+        function updateChart() {
+            // ใช้ fetch เพื่อดึงข้อมูลใหม่จากเซิร์ฟเวอร์
+            fetch('get_leave_data.php')
+                .then(response => response.json())
+                .then(data => {
+                    // อัปเดตข้อมูลในกราฟ
+                    leaveChart.data.labels = data.labels;  // อัปเดต labels
+                    leaveChart.data.datasets[0].data = data.values;  // อัปเดต values
+                    leaveChart.update();  // อัปเดตกราฟ
+                })
+                .catch(error => console.error('Error updating chart:', error));
+        }
 
+        // กำหนดให้กราฟอัปเดตทุก 5 วินาที
+        setInterval(updateChart, 5000);
 
+        // เรียกใช้ฟังก์ชันทันทีเมื่อโหลดหน้า
+        document.addEventListener('DOMContentLoaded', function () {
+            updateChart();
+        });
+    </script>
 </body>
 
 </html>

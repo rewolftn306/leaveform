@@ -307,7 +307,7 @@ $conn->close();
                                     <!-- ปุ่มดูรายละเอียด -->
                                     <button type="button" class="btn btn-info btn-sm" data-bs-toggle="modal"
                                         data-bs-target="#remarkModal<?= $leave['ApplicationID']; ?>">
-                                        รายละเอียด
+                                        รายละเอียดการลา
                                     </button>
 
                                     <!-- Modal สำหรับการแสดงหมายเหตุ -->
