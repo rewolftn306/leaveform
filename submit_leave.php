@@ -41,6 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ordinationWat = isset($_POST['ordination_wat']) ? sanitize_input($_POST['ordination_wat']) : '';
     $ordinationAddress = isset($_POST['ordination_address']) ? sanitize_input($_POST['ordination_address']) : '';
     $ordinationDate = isset($_POST['ordination_date']) ? sanitize_input($_POST['ordination_date']) : '';
+    $selectAddfile = isset($_POST['select_addfile']) ? sanitize_input($_POST['select_addfile']) : '';
+    $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;
 
     // รับ UserID จาก Session
     $userID = intval($_SESSION['UserID']);
@@ -91,26 +93,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // ตรวจสอบว่ามีการเลือกตัวเลือก "แนบไฟล์" หรือ "ขอจัดส่ง"
     $documentFilePath = null;
     if ($documentOption === 'attach' && isset($_FILES['documents']) && $_FILES['documents']['error'] === UPLOAD_ERR_OK) {
-        // อัปโหลดไฟล์ PDF และเก็บในโฟลเดอร์
+        // ตรวจสอบและเก็บไฟล์ PDF
         $uploadDir = 'uploads/';
         $filePath = $uploadDir . basename($_FILES['documents']['name']);
         if (move_uploaded_file($_FILES['documents']['tmp_name'], $filePath)) {
-            $documentFilePath = $filePath;  // เก็บเส้นทางไฟล์
+            $documentFilePath = $filePath;
         } else {
             header("Location: inputform.php?error=ไม่สามารถอัปโหลดไฟล์ได้");
             exit();
         }
+    } else {
+        $documentFilePath = null; // หากเลือกส่งในวันแรกที่กลับมา ไม่ต้องแนบไฟล์
     }
 
-    // แทรกข้อมูลการลา
-    $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
+    // แทรกข้อมูลลงฐานข้อมูล
+    $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) 
+            VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
     $stmt = $conn->prepare($sql);
-    if (!$stmt) {
-        error_log("Prepare failed: " . $conn->error);
-        header("Location: inputform.php?error=เกิดข้อผิดพลาดในการส่งคำขอการลา");
-        exit();
-    }
-
     $stmt->bind_param("iisssss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
 
     if ($stmt->execute()) {
@@ -137,7 +136,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "&ordination_status=" . urlencode($ordinationStatus) .
             "&ordination_wat=" . urlencode($ordinationWat) .
             "&ordination_date=" . urlencode($ordinationDate) . // ส่งตัวแปร ordination_date
-            "&ordination_address=" . urlencode($ordinationAddress));
+            "&ordination_address=" . urlencode($ordinationAddress) .
+            "&select_addfile=" . urlencode($selectAddfile));
         exit();
 
     } else {

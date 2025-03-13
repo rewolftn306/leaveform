@@ -178,6 +178,8 @@ if ($leaveType == 'ลาป่วย') {
     $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 2, $conn);  // 2 = ลากิจส่วนตัว
 } elseif ($leaveType == 'การลาคลอดบุตร') {
     $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 3, $conn);  // 3 = การลาคลอดบุตร
+} elseif ($leaveType == 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล') {
+    $lastLeaveData = getLastLeaveByType($leaveData['UserID'], 6, $conn);  // 4 = ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล
 }
 
 
@@ -190,6 +192,11 @@ if ($lastLeaveData) {
 
     // คำนวณจำนวนวันลา
     $lastleaveDays = calculateLeaveDays($lastLeaveData['StartDate'], $lastLeaveData['EndDate']);
+}else {
+    // กำหนดค่าเริ่มต้นหากไม่มีข้อมูลการลาครั้งล่าสุด
+    $lastLeaveStartDate = '-';
+    $lastLeaveEndDate = '-';
+    $lastleaveDays = '-';
 }
 
 // ดึงข้อมูลลายเซ็นจากฐานข้อมูล
@@ -233,6 +240,8 @@ $ordinationStatus = isset($_GET['ordination_status']) ? $_GET['ordination_status
 $ordinationWat = isset($_GET['ordination_wat']) ? $_GET['ordination_wat'] : '';
 $ordinationDate = isset($_GET['ordination_date']) ? $_GET['ordination_date'] : '';
 $ordinationAddress = isset($_GET['ordination_address']) ? $_GET['ordination_address'] : '';
+$selectAddfile = isset($_GET['select_addfile']) ? $_GET['select_addfile'] : '';
+
 
 // Insert data based on the template
 switch ($leaveType) {
@@ -334,6 +343,9 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai('' . $formattedStartDate));
         $pdf->SetXY(38, 128);
         $pdf->Write(0, convertThai('' . $formattedEndDate));
+        $leaveDays = calculateLeaveDays($leaveData['StartDate'], $leaveData['EndDate']);
+        $pdf->SetXY(78, 121);  // ปรับตำแหน่งของจำนวนวันที่ต้องการแสดง
+        $pdf->Write(0, convertThai($leaveDays . ' '));
         $pdf->SetXY(117, 156.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 119, 142, $signatureWidth, $signatureHeight);
@@ -341,7 +353,8 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai('' . $formattedBirthDate));
         if ($ordinationStatus == "เคยอุปสมบท") {
             drawTick($pdf, 92, 90, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
-        }if ($ordinationStatus == "ยังไม่เคยอุปสมบท") {
+        }
+        if ($ordinationStatus == "ยังไม่เคยอุปสมบท") {
             drawTick($pdf, 49, 91, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
         }
         $pdf->SetXY(37, 97.5);
@@ -439,6 +452,8 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai('' . $formattedDate));
         $pdf->SetXY(137, 28.5);
         $pdf->Write(0, convertThai('คณะวิทยาการสารสนเทศ'));
+        $pdf->SetXY(35, 61);
+        $pdf->Write(0, convertThai('คณบดี'));
         $pdf->SetXY(160, 70);
         $pdf->Write(0, convertThai('' . $leaveData['Position']));
         $pdf->SetXY(40, 79);
@@ -457,6 +472,15 @@ switch ($leaveType) {
         $pdf->SetXY(114, 154.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 119, 139.5, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(107, 90);
+        $pdf->Write(0, convertThai(' ' . $contactInfo));
+        if ($selectAddfile == "แนบสำเนาสูติบัตรและทะเบียนสมรส") {
+            drawTick($pdf, 92, 90, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }
+        if ($selectAddfile == "ขอจัดส่งในวันแรกที่ข้าพกลับมา") {
+            drawTick($pdf, 49, 91, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }
+        
         break;
 }
 

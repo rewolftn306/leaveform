@@ -119,21 +119,6 @@ if (isset($_GET['success'])) {
                     <!-- แสดงเงื่อนไขการลา -->
                 </div>
 
-                <!-- ตัวเลือกสำหรับกรอกข้อมูล -->
-                <div id="additional_options" class="mb-3" style="display: none;">
-                    <label class="form-label">กรุณาเลือกตัวเลือก:</label><br>
-                    <input type="radio" id="attachDocuments" name="document_option" value="attach"
-                        onchange="toggleFileInput(true)"> แนบสำเนาสูติบัตรและทะเบียนสมรส
-                    <input type="radio" id="sendDocuments" name="document_option" value="send"
-                        onchange="toggleFileInput(false)"> ขอจัดส่งในวันแรกที่ข้าพกลับมา
-                </div>
-
-                <!-- ช่องสำหรับแนบไฟล์เมื่อเลือก "แนบเอกสาร" -->
-                <div id="fileInputSection" class="mb-3" style="display: none;">
-                    <label for="documents" class="form-label">แนบไฟล์:</label>
-                    <input type="file" id="documents" name="documents" class="form-control">
-                </div>
-
                 <div class="mb-3">
                     <label for="start_date" class="form-label">วันที่เริ่มลา:</label>
                     <input type="date" id="start_date" name="start_date" class="form-control" required>
@@ -204,7 +189,22 @@ if (isset($_GET['success'])) {
                         placeholder="กรอกวันที่ (เช่น 01 เมษายน 2565)"></textarea>
                 </div>
 
+                <!-- ตัวเลือกสำหรับกรอกข้อมูล -->
+                <div id="select_addfile" class="mb-3">
+                    <label class="form-label">กรุณาเลือกตัวเลือก:</label><br>
+                    <select id="document_option" name="document_option" class="form-select"
+                        onchange="toggleFileInput(this.value)">
+                        <option value="">เลือกตัวเลือก</option>
+                        <option value="แนบสำเนาสูติบัตรและทะเบียนสมรส">แนบสำเนาสูติบัตรและทะเบียนสมรส</option>
+                        <option value="ขอจัดส่งในวันแรกที่ข้าพกลับมา">ขอจัดส่งในวันแรกที่ข้าพกลับมา</option>
+                    </select>
+                </div>
 
+
+                <div id="fileInputSection" class="mb-3" style="display: none;">
+                    <label for="documents" class="form-label">แนบไฟล์:</label>
+                    <input type="file" id="documents" name="documents" class="form-control">
+                </div>
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
@@ -220,16 +220,23 @@ if (isset($_GET['success'])) {
     <script>
         // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
-            const additionalOptionsSection = document.getElementById('additional_options');
+            const additionalOptionsSection = document.getElementById('select_addfile');
             const workAssignmentSection = document.getElementById('work_assignment_section'); // Section สำหรับมอบหมายงาน
             const workReplacementSection = document.getElementById('work_replacement_section');
             const ordinationSections = document.querySelectorAll('.ordination_section'); // เลือกทุกๆ ordination_section
+            const fileInputSection = document.getElementById('fileInputSection');  // ตัวเลือกไฟล์
 
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
                 additionalOptionsSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
             } else {
                 additionalOptionsSection.style.display = 'none'; // ซ่อนตัวเลือก
+            }
+            // ฟังก์ชันที่แสดงการแนบไฟล์
+            if (leaveTypeID == 10 && documentOption === 'attach') {
+                fileInputSection.style.display = 'block'; // แสดงช่องกรอกไฟล์
+            } else {
+                fileInputSection.style.display = 'none'; // ซ่อนช่องกรอกไฟล์
             }
 
             // เพิ่มเงื่อนไขใหม่สำหรับ "ลาพักผ่อน"
@@ -281,15 +288,18 @@ if (isset($_GET['success'])) {
                 });
         }
 
-        // ฟังก์ชันสำหรับการแสดง/ซ่อนช่องกรอกไฟล์
-        function toggleFileInput(shouldShow) {
+        // ฟังก์ชันเพื่อแสดงหรือซ่อนช่องกรอกไฟล์ตามตัวเลือกที่ผู้ใช้เลือกจาก dropdown
+        function toggleFileInput(selectedOption) {
             const fileInputSection = document.getElementById('fileInputSection');
-            if (shouldShow) {
+
+            // ถ้าเลือก "แนบไฟล์"
+            if (selectedOption === 'attach') {
                 fileInputSection.style.display = 'block';  // แสดงช่องกรอกไฟล์
             } else {
                 fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
             }
         }
+
     </script>
 </body>
 
