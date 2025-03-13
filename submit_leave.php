@@ -41,8 +41,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ordinationWat = isset($_POST['ordination_wat']) ? sanitize_input($_POST['ordination_wat']) : '';
     $ordinationAddress = isset($_POST['ordination_address']) ? sanitize_input($_POST['ordination_address']) : '';
     $ordinationDate = isset($_POST['ordination_date']) ? sanitize_input($_POST['ordination_date']) : '';
-    $selectAddfile = isset($_POST['select_addfile']) ? sanitize_input($_POST['select_addfile']) : '';
-    $documentOption = isset($_POST['document_option']) ? $_POST['document_option'] : null;
+    $childcareOption = isset($_POST['childcare_option']) ? sanitize_input($_POST['childcare_option']) : '';
+    $documentFile = null;  // ตัวแปรสำหรับเก็บที่อยู่ไฟล์
 
     // รับ UserID จาก Session
     $userID = intval($_SESSION['UserID']);
@@ -85,32 +85,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
+    // ตรวจสอบว่ามีการเลือกตัวเลือกการส่งเอกสารและมีการอัปโหลดไฟล์หรือไม่
+    if ($childcareOption === 'แนบสำเนาสูติบัตรและทะเบียนสมรส' && isset($_FILES['documents']) && $_FILES['documents']['error'] === 0) {
+        // ตรวจสอบประเภทไฟล์
+        $allowedTypes = ['application/pdf'];
+        // ตรวจสอบว่าไฟล์เป็น PDF หรือไม่
+        if (!in_array($_FILES['documents']['type'], $allowedTypes)) {
+            header("Location: inputform.php?error=ไฟล์ที่แนบต้องเป็นไฟล์ PDF");
+            exit();
+        }
+
+        // ตรวจสอบประเภทไฟล์จากส่วนขยาย
+        $fileExtension = pathinfo($_FILES['documents']['name'], PATHINFO_EXTENSION);
+        if ($fileExtension !== 'pdf') {
+            header("Location: inputform.php?error=ไฟล์ที่แนบต้องเป็นไฟล์ PDF");
+            exit();
+        }
+
+        // อ่านไฟล์เป็นข้อมูลไบนารี
+        $documentFile = file_get_contents($_FILES['documents']['tmp_name']);
+
+        // ตรวจสอบขนาดไฟล์ (ตัวอย่าง: 10MB)
+        $maxFileSize = 10 * 1024 * 1024; // 10 MB
+        if (strlen($documentFile) > $maxFileSize) {
+            header("Location: inputform.php?error=ขนาดไฟล์ใหญ่เกินไป");
+            exit();
+        }
+    } else {
+        // ถ้าไม่มีการแนบไฟล์
+        $documentFile = null;
+    }
+
     // ดึงชื่อประเภทการลา
     $stmt->bind_result($leaveTypeID, $leaveTypeName);
     $stmt->fetch();
     $stmt->close();
 
-    // ตรวจสอบว่ามีการเลือกตัวเลือก "แนบไฟล์" หรือ "ขอจัดส่ง"
-    $documentFilePath = null;
-    if ($documentOption === 'attach' && isset($_FILES['documents']) && $_FILES['documents']['error'] === UPLOAD_ERR_OK) {
-        // ตรวจสอบและเก็บไฟล์ PDF
-        $uploadDir = 'uploads/';
-        $filePath = $uploadDir . basename($_FILES['documents']['name']);
-        if (move_uploaded_file($_FILES['documents']['tmp_name'], $filePath)) {
-            $documentFilePath = $filePath;
-        } else {
-            header("Location: inputform.php?error=ไม่สามารถอัปโหลดไฟล์ได้");
-            exit();
-        }
+    if ($documentFile !== null) {
+        // แทรกข้อมูลลงฐานข้อมูล
+        $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption) 
+    VALUES (?, ?, ?, ?, 'Pending', ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iissss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentFile);
     } else {
-        $documentFilePath = null; // หากเลือกส่งในวันแรกที่กลับมา ไม่ต้องแนบไฟล์
+        // แทรกข้อมูลลงฐานข้อมูล
+        $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption) 
+    VALUES (?, ?, ?, ?, 'Pending', ?, ?)";
+        $stmt = $conn->prepare($sql);
+        $stmt->bind_param("iissss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentFile);
     }
-
-    // แทรกข้อมูลลงฐานข้อมูล
-    $sql = "INSERT INTO leaveapplications (UserID, LeaveTypeID, StartDate, EndDate, ApprovalStatus, Remarks, DocumentOption, PDFFile) 
-            VALUES (?, ?, ?, ?, 'Pending', ?, ?, ?)";
-    $stmt = $conn->prepare($sql);
-    $stmt->bind_param("iisssss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentOption, $documentFilePath);
 
     if ($stmt->execute()) {
         // หลังจากบันทึกข้อมูลเสร็จ จะส่งไปที่หน้า generate_pdf.php พร้อมกับ application_id
@@ -137,7 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "&ordination_wat=" . urlencode($ordinationWat) .
             "&ordination_date=" . urlencode($ordinationDate) . // ส่งตัวแปร ordination_date
             "&ordination_address=" . urlencode($ordinationAddress) .
-            "&select_addfile=" . urlencode($selectAddfile));
+            "&childcare_option=" . urlencode($childcareOption));
         exit();
 
     } else {

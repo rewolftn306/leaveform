@@ -101,15 +101,14 @@ if (isset($_GET['success'])) {
                     <?= htmlspecialchars($firstName . ' ' . $lastName); ?></label>
             </div>
 
-            <form action="submit_leave.php" method="POST" novalidate>
+            <form action="submit_leave.php" method="POST" enctype="multipart/form-data" novalidate>
                 <div class="mb-3">
                     <label for="leave_type" class="form-label">ประเภทการลา:</label>
                     <select id="leave_type" name="leave_type" class="form-select" required
                         onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
-                            <option value="<?= intval($type['LeaveTypeID']); ?>"
-                                <?= $type['LeaveName'] == 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร' ? 'selected' : '' ?>>
+                            <option value="<?= intval($type['LeaveTypeID']); ?>" <?= $type['LeaveName'] == '-- เลือกประเภทการลา --' ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($type['LeaveName']); ?>
                             </option>
                         <?php endforeach; ?>
@@ -130,25 +129,25 @@ if (isset($_GET['success'])) {
                 <div class="mb-3">
                     <label for="remarks" class="form-label">เหตุผลการลา:</label>
                     <textarea id="remarks" name="remarks" class="form-control" rows="4" placeholder="กรอกเหตุผลการลา"
-                        maxlength="45" required></textarea>
+                        maxlength="50" required></textarea>
                 </div>
                 <div class="mb-3">
                     <label for="contact_info" class="form-label">ระหว่างลาติดต่อข้าพเจ้าได้ที่:</label>
                     <input type="text" id="contact_info" name="contact_info" class="form-control"
-                        placeholder="กรอกข้อมูลการติดต่อ" maxlength="100">
+                        placeholder="กรอกข้อมูลการติดต่อ" maxlength="50">
                 </div>
                 <!-- ช่องกรอกข้อมูลสำหรับการมอบหมายงานระหว่างลา -->
                 <div id="work_assignment_section" class="mb-3" style="display: none;">
                     <label for="assign_work" class="form-label">มอบหมายงานระหว่างลาให้:</label>
                     <input type="text" id="assign_work" name="assign_work" class="form-control"
-                        placeholder="ขอมอบหมายให้" maxlength="100">
+                        placeholder="ขอมอบหมายให้" maxlength="20">
                 </div>
 
                 <!-- ช่องกรอกข้อมูลสำหรับผู้ปฏิบัติงานแทน -->
                 <div id="work_replacement_section" class="mb-3" style="display: none;">
                     <label for="work_replacement" class="form-label">เป็นผู้ปฏิบัติงานแทน ดังนี้:</label>
                     <input type="text" id="work_replacement" name="work_replacement" class="form-control"
-                        placeholder="งานที่มอบหมาย" maxlength="100">
+                        placeholder="งานที่มอบหมาย" required>
                 </div>
 
                 <!-- ช่องกรอกข้อมูลสำหรับวันเกิด -->
@@ -172,14 +171,14 @@ if (isset($_GET['success'])) {
                 <div class="ordination_section mb-3" style="display: none;">
                     <label for="ordination_wat" class="form-label">วัดที่จะอุปสมบท:</label>
                     <input type="text" id="ordination_wat" name="ordination_wat" class="form-control"
-                        placeholder="กรอกชื่อวัดที่อุปสมบท">
+                        placeholder="กรอกชื่อวัดที่อุปสมบท" maxlength="25">
                 </div>
 
                 <!-- ช่องกรอกข้อมูลสำหรับที่อยู่วัด -->
                 <div class="ordination_section mb-3" style="display: none;">
                     <label for="ordination_address" class="form-label">ที่อยู่วัด:</label>
                     <textarea id="ordination_address" name="ordination_address" class="form-control"
-                        placeholder="กรอกที่อยู่วัด"></textarea>
+                        placeholder="กรอกที่อยู่วัด" maxlength="70"></textarea>
                 </div>
 
                 <!-- ช่องกรอกข้อมูลสำหรับกำหนดวันที่จำพรรษา -->
@@ -189,22 +188,19 @@ if (isset($_GET['success'])) {
                         placeholder="กรอกวันที่ (เช่น 01 เมษายน 2565)"></textarea>
                 </div>
 
-                <!-- ตัวเลือกสำหรับกรอกข้อมูล -->
-                <div id="select_addfile" class="mb-3">
-                    <label class="form-label">กรุณาเลือกตัวเลือก:</label><br>
-                    <select id="document_option" name="document_option" class="form-select"
-                        onchange="toggleFileInput(this.value)">
-                        <option value="">เลือกตัวเลือก</option>
+                <div id="childcare_section" class="mb-3" style="display: none;">
+                    <label for="childcare_option" class="form-label">การส่งเอกสาร (ไฟล์ PDF เท่านั้น):</label>
+                    <select id="childcare_option" name="childcare_option" class="form-select">
+                        <option value="ขอจัดส่งในวันแรกที่ข้าพเจ้ากลับมา">ขอจัดส่งในวันแรกที่ข้าพเจ้ากลับมา</option>
                         <option value="แนบสำเนาสูติบัตรและทะเบียนสมรส">แนบสำเนาสูติบัตรและทะเบียนสมรส</option>
-                        <option value="ขอจัดส่งในวันแรกที่ข้าพกลับมา">ขอจัดส่งในวันแรกที่ข้าพกลับมา</option>
                     </select>
                 </div>
-
 
                 <div id="fileInputSection" class="mb-3" style="display: none;">
                     <label for="documents" class="form-label">แนบไฟล์:</label>
                     <input type="file" id="documents" name="documents" class="form-control">
                 </div>
+
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
@@ -215,32 +211,47 @@ if (isset($_GET['success'])) {
         </div>
     </div>
 
+
+
     <!-- Bootstrap JS และ JavaScript สำหรับแสดงเงื่อนไขการลา -->
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        document.getElementById('childcare_option').addEventListener('change', function () {
+            const fileInputSection = document.getElementById('fileInputSection');
+            if (this.value === 'แนบสำเนาสูติบัตรและทะเบียนสมรส') {
+                fileInputSection.style.display = 'block';  // แสดงช่องกรอกไฟล์
+            } else {
+                fileInputSection.style.display = 'none';  // ซ่อนช่องกรอกไฟล์
+            }
+        });
         // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
             const additionalOptionsSection = document.getElementById('select_addfile');
             const workAssignmentSection = document.getElementById('work_assignment_section'); // Section สำหรับมอบหมายงาน
             const workReplacementSection = document.getElementById('work_replacement_section');
             const ordinationSections = document.querySelectorAll('.ordination_section'); // เลือกทุกๆ ordination_section
-            const fileInputSection = document.getElementById('fileInputSection');  // ตัวเลือกไฟล์
+            const childcareSection = document.getElementById('childcare_section');  // ตัวเลือกสำหรับการลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร
+            const fileInputSection = document.getElementById('fileInputSection');  // ช่องกรอกไฟล์
 
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
-                additionalOptionsSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
+                childcareSection.style.display = 'block'; // แสดงตัวเลือกเพิ่มเติม
             } else {
-                additionalOptionsSection.style.display = 'none'; // ซ่อนตัวเลือก
-            }
-            // ฟังก์ชันที่แสดงการแนบไฟล์
-            if (leaveTypeID == 10 && documentOption === 'attach') {
-                fileInputSection.style.display = 'block'; // แสดงช่องกรอกไฟล์
-            } else {
-                fileInputSection.style.display = 'none'; // ซ่อนช่องกรอกไฟล์
+                childcareSection.style.display = 'none'; // ซ่อนตัวเลือก
             }
 
+            // ฟังก์ชันที่แสดงการแนบไฟล์
+            const childcareOption = document.getElementById('childcare_option');
+            childcareOption.addEventListener('change', function () {
+                if (this.value === 'แนบสำเนาสูติบัตรและทะเบียนสมรส') {
+                    fileInputSection.style.display = 'block';  // แสดงช่องกรอกไฟล์
+                } else {
+                    fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
+                }
+            });
+
             // เพิ่มเงื่อนไขใหม่สำหรับ "ลาพักผ่อน"
-            if (leaveTypeID == 3) { // สมมติว่า LeaveTypeID 3 คือ ลาพักผ่อน
+            if (leaveTypeID == 3 || leaveTypeID == 12) { // สมมติว่า LeaveTypeID 3 คือ ลาพักผ่อน
                 workAssignmentSection.style.display = 'block';  // แสดงฟอร์มมอบหมายงานระหว่างลา
                 workReplacementSection.style.display = 'block';
             } else {

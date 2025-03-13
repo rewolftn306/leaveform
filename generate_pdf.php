@@ -18,7 +18,7 @@ include('connect.php');
 mysqli_set_charset($conn, "utf8");
 
 $stmt = $conn->prepare("SELECT la.*, u.FirstName, u.LastName, IFNULL(lt.LeaveName, 'ไม่ระบุ') as leave_type, 
-                               u.Position, u.Department, u.Tel, u.CreatedAt, la.CreateDate, u.Signature
+                               u.Position, u.Department, u.Tel, u.CreatedAt, la.CreateDate, u.Signature, la.DocumentOption
                         FROM leaveapplications la 
                         JOIN users u ON la.UserID = u.UserID
                         LEFT JOIN leavetypes lt ON la.LeaveTypeID = lt.LeaveTypeID
@@ -41,6 +41,7 @@ switch ($leaveType) {
     case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
     case 'ลาดูแลบิดาหรือมารดา':
     case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
+    case 'การลาติดตามคู่สมรส':
         $templatePath = 'form/Form-ใบลาป่วย-ลากิจส่วนตัว-ลาคลอดบุตร_2568-2.pdf';
         break;
     case 'ลาบวช/ประกอบพิธีฮัจย์':
@@ -149,6 +150,9 @@ function calculateLeaveDays($startDate, $endDate)
     // คำนวณจำนวนวัน
     $diffInDays = ($endTimestamp - $startTimestamp) / (60 * 60 * 24) + 0;
 
+    // ปัดเศษส่วนให้เป็นจำนวนเต็ม
+    $diffInDays = round($diffInDays);
+
     return $diffInDays;
 }
 
@@ -192,7 +196,7 @@ if ($lastLeaveData) {
 
     // คำนวณจำนวนวันลา
     $lastleaveDays = calculateLeaveDays($lastLeaveData['StartDate'], $lastLeaveData['EndDate']);
-}else {
+} else {
     // กำหนดค่าเริ่มต้นหากไม่มีข้อมูลการลาครั้งล่าสุด
     $lastLeaveStartDate = '-';
     $lastLeaveEndDate = '-';
@@ -240,8 +244,7 @@ $ordinationStatus = isset($_GET['ordination_status']) ? $_GET['ordination_status
 $ordinationWat = isset($_GET['ordination_wat']) ? $_GET['ordination_wat'] : '';
 $ordinationDate = isset($_GET['ordination_date']) ? $_GET['ordination_date'] : '';
 $ordinationAddress = isset($_GET['ordination_address']) ? $_GET['ordination_address'] : '';
-$selectAddfile = isset($_GET['select_addfile']) ? $_GET['select_addfile'] : '';
-
+$childcareOption = isset($_GET['childcare_option']) ? $_GET['childcare_option'] : '';
 
 // Insert data based on the template
 switch ($leaveType) {
@@ -251,6 +254,7 @@ switch ($leaveType) {
     case 'ลาเข้ารับการตรวจเลือกหรือเข้ารับเตรียมพล':
     case 'ลาดูแลบิดาหรือมารดา':
     case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
+    case 'การลาติดตามคู่สมรส':
         // แปลงวันที่เป็นภาษาไทย
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
         $formattedDate = convertToThaiDate($leaveData['CreateDate'], true);
@@ -296,6 +300,7 @@ switch ($leaveType) {
             case 'ลากิจส่วนตัว':
             case 'ลาดูแลบิดาหรือมารดา':
             case 'การลากิจเพื่อเลี้ยงดูบุตรต่อเนื่องจากการคลอดบุตร':
+            case 'การลาติดตามคู่สมรส':
                 // ติ๊กที่ช่อง "ลากิจส่วนตัว"
                 drawTick($pdf, 56, 74.5, true); // ตำแหน่งของ "ลากิจส่วนตัว" checkbox
                 drawTick($pdf, 69.5, 93.5, true);
@@ -395,11 +400,11 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai(' ' . $contactInfo));
         $pdf->SetXY(146, 234);
         $pdf->Write(0, convertThai('' . $assignWork));
-        $pdf->SetXY(71, 240.5);
-        $pdf->Write(0, convertThai('' . $workReplacement));
         $pdf->SetXY(137, 272.25);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 140, 258, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(71, 236.5);
+        $pdf->MultiCell(125, 6.6, convertThai('' . $workReplacement), 0, 'L');
         break;
 
     case 'ขอยกเลิกวันลา':
@@ -440,6 +445,35 @@ switch ($leaveType) {
         $pdf->SetXY(140, 134);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 145, 119.5, $signatureWidth, $signatureHeight);
+        $pdf->SetXY(80, 92.5);
+        $pdf->Write(0, convertThai(' ' . $contactInfo));
+        // ตรวจสอบว่าไฟล์ template มีหลายหน้าหรือไม่
+        try {
+            $pageCount = $pdf->setSourceFile($templatePath);  // โหลดจำนวนหน้าในไฟล์ PDF
+            // สำหรับแต่ละหน้าใน template
+            for ($pageNo = 2; $pageNo <= $pageCount; $pageNo++) {
+                // เพิ่มหน้าใหม่เฉพาะสำหรับแต่ละหน้าใน template
+                $pdf->AddPage();  // เพิ่มหน้าใหม่
+                $tplIdx = $pdf->importPage($pageNo);  // โหลดหน้าปัจจุบันจาก template
+                $pdf->useTemplate($tplIdx);  // ใช้ template นี้ในหน้าใหม่
+                $pdf->SetXY(102, 50);
+                $pdf->Write(0, convertThai('' . $formattedStartDate));
+                $pdf->SetXY(132, 50);
+                $pdf->Write(0, convertThai(' -  ' . $formattedEndDate));
+                $pdf->SetXY(61, 56.5);
+                $pdf->Write(0, convertThai('' . $assignWork));
+
+                $pdf->SetXY(122, 160);
+                $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
+                $pdf->Image($tempImageFile, 137, 145, $signatureWidth, $signatureHeight);
+                $pdf->SetXY(135, 173);
+                $pdf->Write(0, convertThai('' . $formattedDate));
+                $pdf->SetXY(34, 66);  // ตั้งตำแหน่งของข้อความ
+                $pdf->MultiCell(155, 7.15, convertThai('' . $workReplacement), 0, 'L');
+            }
+        } catch (Exception $e) {
+            die("ไม่สามารถโหลดไฟล์ PDF: " . $e->getMessage());
+        }
         break;
 
     case 'ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร':
@@ -472,15 +506,49 @@ switch ($leaveType) {
         $pdf->SetXY(114, 154.5);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 119, 139.5, $signatureWidth, $signatureHeight);
+        if ($childcareOption == "ขอจัดส่งในวันแรกที่ข้าพเจ้ากลับมา") {
+            drawTick($pdf, 55, 116, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }
+        if ($childcareOption == "แนบสำเนาสูติบัตรและทะเบียนสมรส") {
+            drawTick($pdf, 55, 106, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        }
         $pdf->SetXY(107, 90);
         $pdf->Write(0, convertThai(' ' . $contactInfo));
-        if ($selectAddfile == "แนบสำเนาสูติบัตรและทะเบียนสมรส") {
-            drawTick($pdf, 92, 90, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
+        // ดึงข้อมูลไฟล์ DocumentOption จากฐานข้อมูล
+        $documentBlob = $leaveData['DocumentOption'];  // ใช้ค่า DocumentOption ที่ดึงมาจากฐานข้อมูล
+        if ($childcareOption == "แนบสำเนาสูติบัตรและทะเบียนสมรส") {
+            $pdf->AddPage();  // เพิ่มหน้าใหม่สำหรับไฟล์ PDF ที่จะสร้าง
+
+            // ตรวจสอบว่าไฟล์มีข้อมูลหรือไม่
+            if ($documentBlob) {
+                // สร้างไฟล์ชั่วคราวสำหรับไฟล์ PDF
+                $tempFile = tempnam(sys_get_temp_dir(), 'document_') . '.pdf';
+                file_put_contents($tempFile, $documentBlob);  // บันทึกไฟล์ PDF ที่ดึงมาจากฐานข้อมูล
+
+                try {
+                    // โหลดไฟล์ PDF ที่ดึงมา
+                    $pageCount = $pdf->setSourceFile($tempFile);  // โหลดจำนวนหน้าในไฟล์ PDF
+                    for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+                        // สำหรับแต่ละหน้าในไฟล์ที่ดึงมา
+                        if ($pageNo > 1) {
+                            $pdf->AddPage();  // เพิ่มหน้าใหม่หากไม่ใช่หน้าแรก
+                        }
+                        // นำเข้าหน้าปัจจุบันจากไฟล์ที่ดึงมา
+                        $tplIdx = $pdf->importPage($pageNo);  // โหลดหน้าปัจจุบัน
+                        $pdf->useTemplate($tplIdx);  // ใช้หน้าในไฟล์ PDF ที่ดึงมา
+                    }
+                } catch (Exception $e) {
+                    die("ไม่สามารถโหลดไฟล์ PDF: " . $e->getMessage());
+                }
+
+                // ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
+                unlink($tempFile);
+            } else {
+                // ถ้าไม่มีไฟล์ในฐานข้อมูล แสดงข้อความว่าไม่มีไฟล์แนบ
+                echo "ไม่พบไฟล์แนบในฐานข้อมูล";
+            }
         }
-        if ($selectAddfile == "ขอจัดส่งในวันแรกที่ข้าพกลับมา") {
-            drawTick($pdf, 49, 91, true);  // วาดเครื่องหมายติ๊กที่ตำแหน่ง (56, 81)
-        }
-        
+
         break;
 }
 
