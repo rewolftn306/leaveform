@@ -352,47 +352,66 @@ $conn->close();
                                             }
                                             break;
                                         case 'Leader2':
-                                            if ($leave['Leader2ApprovalStatus'] === 'Pending') {
+                                            // ตรวจสอบว่า LeaderApprovalStatus ยังเป็น Pending หรือไม่
+                                            if ($leave['LeaderApprovalStatus'] === 'Pending') {
+                                                // ถ้ายังเป็น Pending ให้แสดงข้อความว่า รอการอนุมัติจาก Leader
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader</div>';
+                                            } elseif ($leave['Leader2ApprovalStatus'] === 'Pending') {
+                                                // ถ้าหากสถานะของ Leader2 ยังเป็น Pending ให้แสดงปุ่มอนุมัติและปฏิเสธ
                                                 echo '<form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
-                                                      </form>
-                                                      <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
-                                                      </form>';
+                                                            <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                            <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                            <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                          </form>
+                                                          <form method="POST" class="d-inline">
+                                                            <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                            <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                            <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                          </form>';
                                             }
                                             break;
                                         case 'Leader3':
-                                            if ($leave['Leader3ApprovalStatus'] === 'Pending') {
+                                            // ตรวจสอบสถานะของ Leader และ Leader2 ว่ายังเป็น Pending หรือไม่
+                                            if ($leave['LeaderApprovalStatus'] === 'Pending') {
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader</div>';
+                                            } elseif ($leave['Leader2ApprovalStatus'] === 'Pending') {
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader2</div>';
+                                            } elseif ($leave['Leader3ApprovalStatus'] === 'Pending') {
                                                 echo '<form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
-                                                      </form>
-                                                      <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
-                                                      </form>';
+                                                                <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                                <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                                <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                              </form>
+                                                              <form method="POST" class="d-inline">
+                                                                <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                                <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                                <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                              </form>';
                                             }
                                             break;
+
                                         case 'Director':
-                                            if ($leave['DirectorApprovalStatus'] === 'Pending') {
+                                            // ตรวจสอบสถานะของ Leader, Leader2, Leader3 ว่ายังเป็น Pending หรือไม่
+                                            if ($leave['LeaderApprovalStatus'] === 'Pending') {
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader</div>';
+                                            } elseif ($leave['Leader2ApprovalStatus'] === 'Pending') {
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader2</div>';
+                                            } elseif ($leave['Leader3ApprovalStatus'] === 'Pending') {
+                                                echo '<div class="text-muted">รอการอนุมัติจาก Leader3</div>';
+                                            } elseif ($leave['DirectorApprovalStatus'] === 'Pending') {
                                                 echo '<form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
-                                                      </form>
-                                                      <form method="POST" class="d-inline">
-                                                        <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
-                                                        <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
-                                                        <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
-                                                      </form>';
+                                                            <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                            <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                            <button type="submit" name="approve_leave" class="btn btn-sm btn-success" onclick="return confirm(\'คุณต้องการอนุมัติการลานี้หรือไม่?\');">อนุมัติ</button>
+                                                          </form>
+                                                          <form method="POST" class="d-inline">
+                                                            <input type="hidden" name="leave_id" value="' . intval($leave['ApplicationID']) . '">
+                                                            <input type="hidden" name="csrf_token" value="' . $_SESSION['csrf_token'] . '">
+                                                            <button type="submit" name="reject_leave" class="btn btn-sm btn-danger" onclick="return confirm(\'คุณต้องการปฏิเสธการลานี้หรือไม่?\');">ปฏิเสธ</button>
+                                                          </form>';
                                             }
                                             break;
+
                                     }
 
                                     ?>
