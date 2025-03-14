@@ -136,12 +136,21 @@ if (isset($_GET['success'])) {
                     <input type="text" id="contact_info" name="contact_info" class="form-control"
                         placeholder="กรอกข้อมูลการติดต่อ" maxlength="50">
                 </div>
+                <!-- ช่องกรอกประเทศที่ไป (จะปรากฏเมื่อเลือก "ลาพักผ่อนไปต่างประเทศ") -->
+                <div id="country_section" class="mb-3" style="display: none;">
+                    <label for="country" class="form-label">ประเทศที่ไป:</label>
+                    <input type="text" id="country" name="country" class="form-control" placeholder="กรอกประเทศที่ไป"
+                        maxlength="50">
+                </div>
+
                 <!-- ช่องกรอกข้อมูลสำหรับการมอบหมายงานระหว่างลา -->
                 <div id="work_assignment_section" class="mb-3" style="display: none;">
                     <label for="assign_work" class="form-label">มอบหมายงานระหว่างลาให้:</label>
                     <input type="text" id="assign_work" name="assign_work" class="form-control"
                         placeholder="ขอมอบหมายให้" maxlength="20">
                 </div>
+
+
 
                 <!-- ช่องกรอกข้อมูลสำหรับผู้ปฏิบัติงานแทน -->
                 <div id="work_replacement_section" class="mb-3" style="display: none;">
@@ -201,6 +210,15 @@ if (isset($_GET['success'])) {
                     <input type="file" id="documents" name="documents" class="form-control">
                 </div>
 
+                <!-- ช่องกรอกลายเซ็น -->
+                <div class="mb-3" id="signatureSection" style="display: none;">
+                    <label for="signatureCanvas" class="form-label">ลายเซ็นผู้รับมอบหมายงาน:</label>
+                    <canvas id="signatureCanvas" width="300" height="150" style="border: 1px solid #000;"></canvas>
+                    <input type="hidden" id="signature_data" name="signature_data" />
+                </div>
+
+                <button type="button" id="clearCanvas" class="btn btn-danger mb-3"
+                    style="display: none;">ล้างลายเซ็น</button>
 
                 <!-- CSRF Token -->
                 <input type="hidden" name="csrf_token" value="<?= $_SESSION['csrf_token']; ?>">
@@ -232,6 +250,11 @@ if (isset($_GET['success'])) {
             const ordinationSections = document.querySelectorAll('.ordination_section'); // เลือกทุกๆ ordination_section
             const childcareSection = document.getElementById('childcare_section');  // ตัวเลือกสำหรับการลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร
             const fileInputSection = document.getElementById('fileInputSection');  // ช่องกรอกไฟล์
+            const signatureSection = document.getElementById('signatureSection');  // ช่องกรอกลายเซ็น
+            const specialLeaveSection = document.getElementById('special_leave_section'); // เพิ่มส่วนนี้
+            const clearCanvasButton = document.getElementById('clearCanvas');
+            const countrySection = document.getElementById('country_section');  // ช่องกรอกประเทศ
+
 
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
@@ -249,14 +272,26 @@ if (isset($_GET['success'])) {
                     fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
                 }
             });
+            // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาพักผ่อนไปต่างประเทศ"
+            if (leaveTypeID == 12) {
+                countrySection.style.display = 'block';  // แสดงช่องกรอกประเทศ
+            } else {
+                countrySection.style.display = 'none';  // ซ่อนช่องกรอกประเทศ
+            }
 
             // เพิ่มเงื่อนไขใหม่สำหรับ "ลาพักผ่อน"
             if (leaveTypeID == 3 || leaveTypeID == 12) { // สมมติว่า LeaveTypeID 3 คือ ลาพักผ่อน
                 workAssignmentSection.style.display = 'block';  // แสดงฟอร์มมอบหมายงานระหว่างลา
                 workReplacementSection.style.display = 'block';
+                signatureSection.style.display = 'block';
+                specialLeaveSection.style.display = 'block';
+                clearCanvasButton.style.display = 'inline';
             } else {
                 workAssignmentSection.style.display = 'none';   // ซ่อนฟอร์มมอบหมายงาน
                 workReplacementSection.style.display = 'none';
+                signatureSection.style.display = 'none';
+                specialLeaveSection.style.display = 'none';
+                clearCanvasButton.style.display = 'none';
             }
 
             // เพิ่มเงื่อนไขสำหรับ "ลาบวช/ประกอบพิธีฮัจย์" และ "ลาไปถือศีลและปฏิบัติธรรม"
@@ -311,6 +346,44 @@ if (isset($_GET['success'])) {
             }
         }
 
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const canvas = document.getElementById('signatureCanvas');
+        const ctx = canvas.getContext('2d');
+        let isDrawing = false;
+
+        // ฟังก์ชันในการเริ่มต้นการวาด
+        canvas.addEventListener('mousedown', (e) => {
+            isDrawing = true;
+            ctx.beginPath();
+            ctx.moveTo(e.offsetX, e.offsetY);
+        });
+
+        // ฟังก์ชันในการลาก
+        canvas.addEventListener('mousemove', (e) => {
+            if (isDrawing) {
+                ctx.lineTo(e.offsetX, e.offsetY);
+                ctx.stroke();
+            }
+        });
+
+        // ฟังก์ชันในการหยุดการวาด
+        canvas.addEventListener('mouseup', () => {
+            isDrawing = false;
+        });
+
+        // ฟังก์ชันในการเคลียร์ canvas
+        document.getElementById('clearCanvas').addEventListener('click', () => {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            document.getElementById('signature_data').value = ''; // ลบข้อมูล base64
+        });
+
+        // เมื่อฟอร์มถูกส่ง จะทำการแปลง canvas เป็น base64
+        document.querySelector('form').addEventListener('submit', () => {
+            const signatureData = canvas.toDataURL();
+            document.getElementById('signature_data').value = signatureData;
+        });
     </script>
 </body>
 

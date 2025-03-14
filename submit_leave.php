@@ -43,7 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $ordinationDate = isset($_POST['ordination_date']) ? sanitize_input($_POST['ordination_date']) : '';
     $childcareOption = isset($_POST['childcare_option']) ? sanitize_input($_POST['childcare_option']) : '';
     $documentFile = null;  // ตัวแปรสำหรับเก็บที่อยู่ไฟล์
-
+    $signatureData = isset($_POST['signature_data']) ? $_POST['signature_data'] : null;
+    $counTry = isset($_POST['country']) ? sanitize_input($_POST['country']) : '';
     // รับ UserID จาก Session
     $userID = intval($_SESSION['UserID']);
 
@@ -70,6 +71,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit();
     }
 
+    
     // ตรวจสอบว่าประเภทการลาเป็นประเภทที่มีอยู่จริงหรือไม่
     $stmt = $conn->prepare("SELECT LeaveTypeID, LeaveName FROM leavetypes WHERE LeaveTypeID = ?");
     if (!$stmt) {
@@ -135,6 +137,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $stmt->bind_param("iissss", $userID, $leaveTypeID, $startDate, $endDate, $remarks, $documentFile);
     }
 
+    if (isset($_FILES['signature_input']) && $_FILES['signature_input']['error'] == 0) {
+        // อ่านไฟล์รูปภาพที่อัพโหลด
+        $signatureImage = file_get_contents($_FILES['signature_input']['tmp_name']);
+        $signatureBase64 = base64_encode($signatureImage);  // แปลงเป็น base64
+        // บันทึกหรือใช้งานลายเซ็น base64 ใน PDF
+    }
+
     if ($stmt->execute()) {
         // หลังจากบันทึกข้อมูลเสร็จ จะส่งไปที่หน้า generate_pdf.php พร้อมกับ application_id
         $application_id = $stmt->insert_id; // รับค่า application_id ที่บันทึก
@@ -160,7 +169,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             "&ordination_wat=" . urlencode($ordinationWat) .
             "&ordination_date=" . urlencode($ordinationDate) . // ส่งตัวแปร ordination_date
             "&ordination_address=" . urlencode($ordinationAddress) .
-            "&childcare_option=" . urlencode($childcareOption));
+            "&childcare_option=" . urlencode($childcareOption) .
+            "&country=" . urlencode($counTry) .
+            "&signature_data=" . urlencode($signatureData));
         exit();
 
     } else {

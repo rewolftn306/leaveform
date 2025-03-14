@@ -245,6 +245,8 @@ $ordinationWat = isset($_GET['ordination_wat']) ? $_GET['ordination_wat'] : '';
 $ordinationDate = isset($_GET['ordination_date']) ? $_GET['ordination_date'] : '';
 $ordinationAddress = isset($_GET['ordination_address']) ? $_GET['ordination_address'] : '';
 $childcareOption = isset($_GET['childcare_option']) ? $_GET['childcare_option'] : '';
+$signatureData = isset($_GET['signature_data']) ? $_GET['signature_data'] : '';
+$counTry = isset($_GET['country']) ? $_GET['country'] : '';
 
 // Insert data based on the template
 switch ($leaveType) {
@@ -400,11 +402,41 @@ switch ($leaveType) {
         $pdf->Write(0, convertThai(' ' . $contactInfo));
         $pdf->SetXY(146, 234);
         $pdf->Write(0, convertThai('' . $assignWork));
+        $pdf->SetXY(43, 272);
+        $pdf->Write(0, convertThai('' . $assignWork));
         $pdf->SetXY(137, 272.25);
         $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
         $pdf->Image($tempImageFile, 140, 258, $signatureWidth, $signatureHeight);
         $pdf->SetXY(71, 236.5);
         $pdf->MultiCell(125, 6.6, convertThai('' . $workReplacement), 0, 'L');
+        // ตรวจสอบว่าเป็น base64 image หรือไม่
+        if ($signatureData) {
+            // ตรวจสอบว่าเป็น base64 image หรือไม่
+            $signatureData = preg_replace('#^data:image/\w+;base64,#i', '', $signatureData); // ตัดส่วนของ header base64 ออก
+
+            // แปลง base64 signature เป็นไฟล์ภาพ
+            $signatureImageData = base64_decode($signatureData);
+
+            // ตรวจสอบว่า base64 ถูกต้องหรือไม่
+            if ($signatureImageData === false) {
+                die("ข้อมูลลายเซ็นไม่ถูกต้อง หรือ Base64 ไม่สมบูรณ์");
+            }
+
+            // สร้างไฟล์ชั่วคราวสำหรับลายเซ็น
+            $tempFile = tempnam(sys_get_temp_dir(), 'signature_') . '.png';
+            file_put_contents($tempFile, $signatureImageData);
+
+            // ตรวจสอบว่าไฟล์ที่สร้างขึ้นเป็นไฟล์ PNG ที่ถูกต้องหรือไม่
+            if (!@getimagesize($tempFile)) {
+                die("ไฟล์ลายเซ็นไม่ใช่ไฟล์ PNG ที่ถูกต้อง");
+            }
+
+            // เพิ่มลายเซ็นลงใน PDF
+            $pdf->Image($tempFile, 50, 258, $signatureWidth, $signatureHeight);
+
+            // ลบไฟล์ชั่วคราวหลังใช้งาน
+            unlink($tempFile);
+        }
         break;
 
     case 'ขอยกเลิกวันลา':
@@ -427,6 +459,8 @@ switch ($leaveType) {
         $formattedCreatedAtDate = convertToThaiDate($leaveData['CreatedAt']);
         $pdf->SetXY(129, 39.5);
         $pdf->Write(0, convertThai('' . $formattedDate));
+        $pdf->SetXY(80, 46);
+        $pdf->Write(0, convertThai(' ' . $counTry));
         $pdf->SetXY(135, 67);
         $pdf->Write(0, convertThai('' . $leaveData['Position']));
         $pdf->SetXY(40, 73.5);
@@ -462,14 +496,46 @@ switch ($leaveType) {
                 $pdf->Write(0, convertThai(' -  ' . $formattedEndDate));
                 $pdf->SetXY(61, 56.5);
                 $pdf->Write(0, convertThai('' . $assignWork));
+                $pdf->SetXY(33, 160);
+                $pdf->Write(0, convertThai('' . $assignWork));
 
                 $pdf->SetXY(122, 160);
                 $pdf->Write(0, convertThai($leaveData['FirstName'] . ' ' . $leaveData['LastName']));
                 $pdf->Image($tempImageFile, 137, 145, $signatureWidth, $signatureHeight);
                 $pdf->SetXY(135, 173);
                 $pdf->Write(0, convertThai('' . $formattedDate));
+                $pdf->SetXY(45, 173);
+                $pdf->Write(0, convertThai('' . $formattedDate));
                 $pdf->SetXY(34, 66);  // ตั้งตำแหน่งของข้อความ
                 $pdf->MultiCell(155, 7.15, convertThai('' . $workReplacement), 0, 'L');
+                // ตรวจสอบว่าเป็น base64 image หรือไม่
+                if ($signatureData) {
+                    // ตรวจสอบว่าเป็น base64 image หรือไม่
+                    $signatureData = preg_replace('#^data:image/\w+;base64,#i', '', $signatureData); // ตัดส่วนของ header base64 ออก
+
+                    // แปลง base64 signature เป็นไฟล์ภาพ
+                    $signatureImageData = base64_decode($signatureData);
+
+                    // ตรวจสอบว่า base64 ถูกต้องหรือไม่
+                    if ($signatureImageData === false) {
+                        die("ข้อมูลลายเซ็นไม่ถูกต้อง หรือ Base64 ไม่สมบูรณ์");
+                    }
+
+                    // สร้างไฟล์ชั่วคราวสำหรับลายเซ็น
+                    $tempFile = tempnam(sys_get_temp_dir(), 'signature_') . '.png';
+                    file_put_contents($tempFile, $signatureImageData);
+
+                    // ตรวจสอบว่าไฟล์ที่สร้างขึ้นเป็นไฟล์ PNG ที่ถูกต้องหรือไม่
+                    if (!@getimagesize($tempFile)) {
+                        die("ไฟล์ลายเซ็นไม่ใช่ไฟล์ PNG ที่ถูกต้อง");
+                    }
+
+                    // เพิ่มลายเซ็นลงใน PDF
+                    $pdf->Image($tempFile, 50, 145, $signatureWidth, $signatureHeight);
+
+                    // ลบไฟล์ชั่วคราวหลังใช้งาน
+                    unlink($tempFile);
+                }
             }
         } catch (Exception $e) {
             die("ไม่สามารถโหลดไฟล์ PDF: " . $e->getMessage());
