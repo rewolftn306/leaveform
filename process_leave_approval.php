@@ -78,7 +78,7 @@ function convertDateToThai($date)
     list($day, $month, $year) = explode('/', $date);  // แยกวันที่จากรูปแบบ (วัน/เดือน/ปี)
     $thaiMonth = convertMonthToThai(intval($month));
     $thaiYear = $year + 543;  // เพิ่ม 543 ปี เพื่อให้เป็นปีไทย
-    return $day . " " . $thaiMonth . " " . $thaiYear;
+    return $day . "  " . $thaiMonth . "  " . $thaiYear;
 }
 function drawTick($pdf, $x, $y, $isChecked)
 {
@@ -200,45 +200,33 @@ if (in_array($leaveTypeID, [1, 2, 6, 7, 8, 9, 11])) {
 if (in_array($leaveTypeID, [4, 5])) {
     if ($current_role == 'Leader') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 178);
-        $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(140, 184.5);
+        $pdf->SetXY(121, 180);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(140, 191);
+        $pdf->SetXY(125, 186);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 165; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 130;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 167; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Leader2') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(45, 197);
+        $pdf->SetXY(120, 215);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(48, 203.5);
+        $pdf->SetXY(120, 220);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 209.5);
+        $pdf->SetXY(126, 226);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 185; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
-    } elseif ($current_role == 'Leader3') {
-        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(50, 231.5);
-        $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(58, 238);
-        $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 244.5);
-        $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 216; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 120;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 203; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Director') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 235.5);
+        $pdf->SetXY(104, 262.5);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(142, 242);
+        $pdf->SetXY(104, 268.5);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(137, 248.5);
+        $pdf->SetXY(109, 274);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 225; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
-        drawTick($pdf, 133, 211, true);
+        $signatureX = 110;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 250; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        drawTick($pdf, 54, 245, true);
     }
 }
 
@@ -283,103 +271,104 @@ if ($leaveTypeID == 3) {
     }
 }
 
-if ($leaveTypeID == 12){
+if ($leaveTypeID == 12) {
     if ($current_role == 'Leader') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 178);
+        $pdf->SetXY(44, 172.5);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(140, 184.5);
-        $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(140, 191);
+        $pdf->SetXY(45, 185.5);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 165; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 60;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 160; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Leader2') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(45, 197);
+        $pdf->SetXY(128, 172.5);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(48, 203.5);
-        $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 209.5);
+        $pdf->SetXY(128, 185.5);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 185; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 135;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 160; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Leader3') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(50, 231.5);
-        $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(58, 238);
-        $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 244.5);
+        $pdf->SetXY(44, 254.5);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 216; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 50;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 226; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Director') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 235.5);
+        $pdf->SetXY(127, 242);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(142, 242);
+        $pdf->SetXY(135, 249);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(137, 248.5);
+        $pdf->SetXY(133, 255);
         $pdf->Write(0, convertThai($thaiDate));
         $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 225; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
-        drawTick($pdf, 133, 211, true);
+        $signatureY = 233; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        drawTick($pdf, 124, 215, true);
     }
 }
 
-if ($leaveTypeID == 10){
+if ($leaveTypeID == 10) {
     if ($current_role == 'Leader') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 178);
-        $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(140, 184.5);
+        $pdf->SetXY(119.5, 178);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(140, 191);
+        $pdf->SetXY(123, 184);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureX = 130;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
         $signatureY = 165; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Leader2') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(45, 197);
+        $pdf->SetXY(117, 219);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(48, 203.5);
+        $pdf->SetXY(117, 224);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 209.5);
+        $pdf->SetXY(124, 230);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 185; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
-    } elseif ($current_role == 'Leader3') {
-        $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(50, 231.5);
-        $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(58, 238);
-        $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(44, 244.5);
-        $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 52;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 216; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        $signatureX = 120;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 207; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
     } elseif ($current_role == 'Director') {
         $pdf->SetTextColor(0, 0, 255);  // เปลี่ยนเป็นสีหมึกน้ำเงิน
-        $pdf->SetXY(136, 235.5);
+        $pdf->SetXY(104, 260.5);
         $pdf->Write(0, convertThai('' . $fullName));
-        $pdf->SetXY(142, 242);
+        $pdf->SetXY(104, 266.5);
         $pdf->Write(0, convertThai('' . $current_role));
-        $pdf->SetXY(137, 248.5);
+        $pdf->SetXY(109, 272);
         $pdf->Write(0, convertThai($thaiDate));
-        $signatureX = 145;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
-        $signatureY = 225; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
-        drawTick($pdf, 133, 211, true);
+        $signatureX = 110;  // ตัวอย่างการปรับตำแหน่ง X สำหรับ Leader
+        $signatureY = 248; // ตัวอย่างการปรับตำแหน่ง Y สำหรับ Leader
+        drawTick($pdf, 52, 243, true);
     }
 }
 
 // แทรกลายเซ็นในไฟล์ PDF
 $pdf->Image($tempImageFile, $signatureX, $signatureY, $signatureWidth, $signatureHeight); // แทรกลายเซ็นที่ตำแหน่งที่กำหนด
 
+// โหลดไฟล์ PDF ที่มีอยู่จากไฟล์ชั่วคราว
+$pageCount = $pdf->setSourceFile($tempPdfFile);
+
+// ตรวจสอบจำนวนหน้า
+if ($pageCount < 1) {
+    die("ไม่พบหน้าของไฟล์ PDF");
+}
+
+// วนลูปเพื่อแทรกข้อมูลในทุกหน้าของ PDF
+for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
+    // หากเป็นหน้าผลลัพธ์แรกให้ไม่เพิ่มหน้าใหม่
+    if ($pageNo == 1) {
+        // ใช้หน้าแรกจาก template
+        $tplIdx = $pdf->importPage($pageNo);
+        
+    } else {
+        // เพิ่มหน้าใหม่และนำเข้าหน้าจากไฟล์ PDF
+        $pdf->AddPage();
+        $tplIdx = $pdf->importPage($pageNo);
+        $pdf->useTemplate($tplIdx);
+    }
+}
 // ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
 unlink($tempPdfFile);
 unlink($tempImageFile);
-
 $pdfData = $pdf->Output('I');
 // ส่งออก PDF ที่แก้ไขแล้วเป็นข้อมูลไบนารี
 $pdfData = $pdf->Output('S');

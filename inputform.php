@@ -108,14 +108,15 @@ if (isset($_GET['success'])) {
                         onchange="fetchConditions(this.value)">
                         <option value="">-- เลือกประเภทการลา --</option>
                         <?php foreach ($leaveTypes as $type): ?>
-                            <option value="<?= intval($type['LeaveTypeID']); ?>" <?= $type['LeaveName'] == '-- เลือกประเภทการลา --' ? 'selected' : '' ?>>
+                            <option value="<?= intval($type['LeaveTypeID']); ?>">
                                 <?= htmlspecialchars($type['LeaveName']); ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
+
                 <div id="leave_conditions" class="mb-3">
-                    <!-- แสดงเงื่อนไขการลา -->
+                    <!-- เงื่อนไขการลาจะถูกแสดงที่นี่ -->
                 </div>
 
                 <div class="mb-3">
@@ -244,6 +245,32 @@ if (isset($_GET['success'])) {
         });
         // ฟังก์ชันเพื่อแสดงหรือซ่อนตัวเลือกการแนบไฟล์ตามประเภทการลา
         function fetchConditions(leaveTypeID) {
+             // ถ้าไม่มีการเลือกประเภทการลา
+             console.log("Selected LeaveTypeID:", leaveTypeID);  // ตรวจสอบค่า LeaveTypeID ที่ส่งไป
+            if (leaveTypeID === "") {
+                document.getElementById('leave_conditions').innerHTML = "";
+                return;
+            }
+
+            fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
+                .then(response => response.json())
+                .then(data => {
+                    console.log("Fetched conditions:", data);  // ตรวจสอบข้อมูลที่ได้รับจากเซิร์ฟเวอร์
+                    if (data.error) {
+                        document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
+                    } else {
+                        let html = "<h5>เงื่อนไขการลา:</h5><ul>";
+                        data.forEach(condition => {
+                            html += `<li>${condition}</li>`;
+                        });
+                        html += "</ul>";
+                        document.getElementById('leave_conditions').innerHTML = html;
+                    }
+                })
+                .catch(error => {
+                    console.error('Error:', error);
+                    document.getElementById('leave_conditions').innerHTML = "<div class='alert alert-danger'>เกิดข้อผิดพลาดในการดึงข้อมูลเงื่อนไขการลา</div>";
+                });
             const additionalOptionsSection = document.getElementById('select_addfile');
             const workAssignmentSection = document.getElementById('work_assignment_section'); // Section สำหรับมอบหมายงาน
             const workReplacementSection = document.getElementById('work_replacement_section');
@@ -255,6 +282,16 @@ if (isset($_GET['success'])) {
             const clearCanvasButton = document.getElementById('clearCanvas');
             const countrySection = document.getElementById('country_section');  // ช่องกรอกประเทศ
 
+            // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาบวช/ประกอบพิธีฮัจย์" หรือ "ลาไปถือศีลและปฏิบัติธรรม"
+            if (leaveTypeID == 4 || leaveTypeID == 5) {  // LeaveTypeID 4 และ 5 สำหรับ "ลาบวช" และ "ลาไปถือศีล"
+                ordinationSections.forEach(section => {
+                    section.style.display = 'block';  // แสดงฟอร์มข้อมูลอุปสมบท
+                });
+            } else {
+                ordinationSections.forEach(section => {
+                    section.style.display = 'none';   // ซ่อนฟอร์มข้อมูลอุปสมบท
+                });
+            }
 
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
             if (leaveTypeID == 10) { // LeaveTypeID สำหรับ "ลาเพื่อดูแลบุตรและภรรยาหลังคลอดบุตร"
@@ -272,6 +309,7 @@ if (isset($_GET['success'])) {
                     fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
                 }
             });
+
             // ตรวจสอบว่าเลือกประเภทการลาเป็น "ลาพักผ่อนไปต่างประเทศ"
             if (leaveTypeID == 12) {
                 countrySection.style.display = 'block';  // แสดงช่องกรอกประเทศ
@@ -294,56 +332,8 @@ if (isset($_GET['success'])) {
                 clearCanvasButton.style.display = 'none';
             }
 
-            // เพิ่มเงื่อนไขสำหรับ "ลาบวช/ประกอบพิธีฮัจย์" และ "ลาไปถือศีลและปฏิบัติธรรม"
-            if (leaveTypeID == 4 || leaveTypeID == 5) {  // สมมติว่า LeaveTypeID 4 คือ ลาบวช/ประกอบพิธีฮัจย์ และ LeaveTypeID 5 คือ ลาไปถือศีล
-                ordinationSections.forEach(section => {
-                    section.style.display = 'block';  // แสดงฟอร์มข้อมูลอุปสมบท
-                });
-            } else {
-                ordinationSections.forEach(section => {
-                    section.style.display = 'none';   // ซ่อนฟอร์มข้อมูลอุปสมบท
-                });
-            }
 
-            // เรียก fetchConditions() เพื่อนำข้อมูลเงื่อนไขการลา
-            if (leaveTypeID === "") {
-                document.getElementById('leave_conditions').innerHTML = "";
-                return;
-            }
-            fetch(`get_leave_conditions.php?leaveTypeID=${leaveTypeID}`)
-                .then(response => response.json())
-                .then(data => {
-                    if (data.error) {
-                        document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">${data.error}</div>`;
-                        return;
-                    }
-                    if (data.length === 0) {
-                        document.getElementById('leave_conditions').innerHTML = "<p>ไม่มีเงื่อนไขการลาในประเภทนี้</p>";
-                        return;
-                    }
-                    let html = "<h5>เงื่อนไขการลา:</h5><ul>";
-                    data.forEach(condition => {
-                        html += `<li>${condition}</li>`;
-                    });
-                    html += "</ul>";
-                    document.getElementById('leave_conditions').innerHTML = html;
-                })
-                .catch(error => {
-                    console.error('Error:', error);
-                    document.getElementById('leave_conditions').innerHTML = `<div class="alert alert-danger">เกิดข้อผิดพลาดในการดึงข้อมูลเงื่อนไขการลา</div>`;
-                });
-        }
-
-        // ฟังก์ชันเพื่อแสดงหรือซ่อนช่องกรอกไฟล์ตามตัวเลือกที่ผู้ใช้เลือกจาก dropdown
-        function toggleFileInput(selectedOption) {
-            const fileInputSection = document.getElementById('fileInputSection');
-
-            // ถ้าเลือก "แนบไฟล์"
-            if (selectedOption === 'attach') {
-                fileInputSection.style.display = 'block';  // แสดงช่องกรอกไฟล์
-            } else {
-                fileInputSection.style.display = 'none';   // ซ่อนช่องกรอกไฟล์
-            }
+           
         }
 
     </script>

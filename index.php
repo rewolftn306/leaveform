@@ -187,8 +187,8 @@ $chartValues = json_encode(array_values($chartData)); ?>
         }
 
         #leaveChart {
-            width: 80%;
-            height: 400px !important;
+            width: 10%;
+            height: 600px !important;
         }
 
         .legend-container {
@@ -294,14 +294,9 @@ $chartValues = json_encode(array_values($chartData)); ?>
         </div>
 
         <!-- Chart Section -->
-        <div class="chart-container">
-            <div class="chart-wrapper">
-                <canvas id="leaveChart" aria-label="กราฟสถิติการลางาน" role="img"></canvas>
-            </div>
-            <div class="legend-container" id="leaveTypesLegend">
-                <!-- รายการชื่อประเภทการลาจะถูกเติมที่นี่โดย JavaScript -->
-            </div>
-        </div>
+        <?php if ($role === 'Employee'): ?>
+                <?php include('user_leave_dashboard.php'); ?>
+            <?php endif; ?>
         <!-- Table Section -->
         <div class="table-container">
             <h3 class="text-center">
@@ -447,7 +442,7 @@ $chartValues = json_encode(array_values($chartData)); ?>
         const legendContainer = document.getElementById('leaveTypesLegend');
 
         // วนลูปเพื่อแสดงประเภทการลาและจำนวนวัน
-        leaveTypes.forEach((leaveType, index) => {
+        /*leaveTypes.forEach((leaveType, index) => {
             const legendItem = document.createElement('div');
             legendItem.classList.add('legend-item');
 
@@ -456,12 +451,12 @@ $chartValues = json_encode(array_values($chartData)); ?>
             colorBox.style.backgroundColor = chartColors[index];
 
             const label = document.createElement('span');
-            label.innerText = `${leaveType} = ${leaveDays[index]} วัน`; // แสดงประเภทการลาและจำนวนวัน
+            label.innerText = `${leaveType} = "${leaveDays[index]} วัน"`; // แสดงประเภทการลาและจำนวนวัน
 
             legendItem.appendChild(colorBox);
             legendItem.appendChild(label);
             legendContainer.appendChild(legendItem);
-        });
+        })*/;
 
 
     </script>
