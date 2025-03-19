@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $leave_id = intval($_POST['leave_id']);
         include('process_leave_approval.php'); // ไฟล์นี้จะทำการอัปเดต PDF และเพิ่มลายเซ็น
 
-        $message = "คำขอลานี้ได้รับการอนุมัติจาก " . $current_role . " แล้ว กรุณากดอนุมัติหรือปฏิเสธคำขอของคุณ";
+        $message = "คำขอลาได้รับการอนุมัติจาก " . $current_role . " แล้ว กรุณากดอนุมัติหรือปฏิเสธคำขอลาใหม่ของคุณ";
         sendGoogleChatNotification($message, $current_role);  // ส่งข้อความตามบทบาทที่เลือก
     }
 

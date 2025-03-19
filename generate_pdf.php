@@ -635,8 +635,8 @@ $stmt->close();
 $conn->close();
 
 // Display success message and redirect to index.php
-//echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
+echo "<script>alert('ส่งแบบฟอร์มสำเร็จแล้ว'); window.location.href = 'index.php';</script>";
 
 //for debug
-$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
+//$pdf->Output('I', 'ใบลา_' . $applicationId . '.pdf');
 ?>

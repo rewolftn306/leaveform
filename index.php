@@ -286,6 +286,8 @@ $chartValues = json_encode(array_values($chartData)); ?>
                 <?php endif; ?>
                 <?php if ($role === 'Director' || $role === 'Admin' || $role === 'Leader' || $role === 'Leader2' || $role === 'Leader3'): ?>
                     <a href="approve_leave.php" class="btn btn-success">อนุมัติการลา</a>
+                    <a href="edit_user.php?userid=<?= $_SESSION['UserID']; ?>"
+                        class="btn btn-primary">แก้ไขข้อมูลส่วนตัว</a>
                 <?php endif; ?>
                 <?php if ($role === 'Admin'): ?>
                     <a href="manage_users.php" class="btn btn-info">จัดการผู้ใช้งานทั้งหมด</a>

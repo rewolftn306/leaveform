@@ -369,7 +369,7 @@ for ($pageNo = 1; $pageNo <= $pageCount; $pageNo++) {
 // ลบไฟล์ชั่วคราวหลังจากใช้งานเสร็จ
 unlink($tempPdfFile);
 unlink($tempImageFile);
-$pdfData = $pdf->Output('I');
+//$pdfData = $pdf->Output('I');
 // ส่งออก PDF ที่แก้ไขแล้วเป็นข้อมูลไบนารี
 $pdfData = $pdf->Output('S');
 
